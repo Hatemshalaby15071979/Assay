@@ -58,6 +58,7 @@ honest: the tool never tells you a photo is "fine" on its own.
 
 ```
 python -m sheet_solution run --sheet your-sheet.xlsx --template your-checks.txt --out out/report
+# (add --key <column> to name which column identifies each row; auto-detected otherwise)
 ```
 
 **Or click through the browser:** `python gui/main.py`, open

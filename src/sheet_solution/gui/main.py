@@ -83,8 +83,22 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
         spool = _new_spool_for(data)
         dest = spool / Path(f.filename).name
         dest.write_bytes(data)
+        # Column preview so a non-technical user can verify the upload and
+        # see the exact column names (no more guessing 'passport_photo').
+        columns: list[str] = []
+        preview: list[list[str]] = []
+        rows: list[dict] = []
+        try:
+            rows, _, _ = _load_sheet(dest)
+            if rows:
+                columns = list(rows[0].keys())
+                preview = [[str(r.get(c, "")) for c in columns]
+                           for r in rows[:3]]
+        except Exception:  # noqa: BLE001 - preview is best-effort, never blocks upload
+            columns, preview = [], []
         return jsonify({"ok": True, "id": spool.name, "name": dest.name,
-                        "path": str(dest)})
+                        "path": str(dest), "columns": columns,
+                        "preview": preview, "row_count": len(rows) if rows else 0})
 
     @app.post("/api/checks")
     def run_checks():

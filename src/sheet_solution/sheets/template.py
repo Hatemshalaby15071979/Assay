@@ -39,17 +39,22 @@ REQUIRED_FIELDS = (
     "expected_value_or_rule",
     "when_it_fails_say",
     "machine_can_check",
+)
+
+# Optional fields a user may add. example_* are optional: they help the user
+# think through their rule but the engine never uses them, so forcing them
+# was pure friction for non-technical users.
+OPTIONAL_FIELDS = (
+    "tolerance",
+    "column_name",
+    "row_key_column",
+    "human_review_note",
     "example_that_passes",
     "example_that_fails",
 )
 
 # Optional fields a user may add.
-OPTIONAL_FIELDS = (
-    "tolerance",          # e.g. "within 5%" for numeric rules
-    "column_name",        # exact spreadsheet column to inspect
-    "row_key_column",     # which column identifies "the same thing"
-    "human_review_note",  # note shown when machine_can_check = no
-)
+
 
 MACHINE_CHECK_VALUES = {"yes", "no"}
 
@@ -65,8 +70,8 @@ class Check:
     expected_value_or_rule: str
     when_it_fails_say: str
     machine_can_check: bool
-    example_that_passes: str
-    example_that_fails: str
+    example_that_passes: str = ""
+    example_that_fails: str = ""
     tolerance: str = ""
     column_name: str = ""
     row_key_column: str = ""
@@ -154,8 +159,8 @@ def parse_template(path: Path, sheet_path: str) -> CheckConfig:
             expected_value_or_rule=kv["expected_value_or_rule"].strip(),
             when_it_fails_say=kv["when_it_fails_say"].strip(),
             machine_can_check=(machine == "yes"),
-            example_that_passes=kv["example_that_passes"].strip(),
-            example_that_fails=kv["example_that_fails"].strip(),
+            example_that_passes=kv.get("example_that_passes", "").strip(),
+            example_that_fails=kv.get("example_that_fails", "").strip(),
             tolerance=kv.get("tolerance", "").strip(),
             column_name=kv.get("column_name", "").strip(),
             row_key_column=kv.get("row_key_column", "").strip(),

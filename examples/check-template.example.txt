@@ -14,8 +14,8 @@ expected_value_or_rule = no blank
 when_it_fails_say = No passport photo attached for this applicant
 machine_can_check = yes
 column_name = passport_photo
-example_that_passes = an applicant row that has a photo in the cell
-example_that_fails = an applicant row with an empty photo cell
+# (optional) example_that_passes = an applicant row that has a photo in the cell
+# (optional) example_that_fails = an applicant row with an empty photo cell
 
 [CHECK]
 check_id = CH-002

@@ -38,8 +38,26 @@ from sheet_solution.core import config as cfg  # noqa: F401
 import tempfile  # noqa: F401  (core CLI's atomic-write staging; re-exposed)
 
 
-def _load_sheet(path: Path) -> tuple[list[dict], str, bool]:
-    """Return (rows, key_col, is_xlsx). Fails closed on unreadable input."""
+def _detect_key_column(header: list[str]) -> str:
+    """Pick the most likely 'row identifier' column for traceable reports.
+
+    Prefers columns whose name suggests an id/name/key; falls back to the
+    first column; returns 'row' only when there is no header at all.
+    """
+    lowered = [h.strip().lower() for h in header]
+    for needle in ("id", "key", "name", "ref", "code", "number"):
+        for i, h in enumerate(lowered):
+            if needle in h and h:
+                return header[i]
+    return header[0] if header and header[0].strip() else "row"
+
+
+def _load_sheet(path: Path, key_col: str | None = None) -> tuple[list[dict], str, bool]:
+    """Return (rows, key_col, is_xlsx). Fails closed on unreadable input.
+
+    `key_col` lets the caller name the row-identifier column explicitly;
+    otherwise it is auto-detected from the header (see _detect_key_column).
+    """
     ext = path.suffix.lower()
     if ext == ".xlsx":
         try:
@@ -57,7 +75,8 @@ def _load_sheet(path: Path) -> tuple[list[dict], str, bool]:
         rows = [{header[i]: (r[i] if i < len(r) else "")
                  for i in range(len(header))}
                 for r in grid[1:]]
-        return rows, "row", True
+        chosen = key_col or _detect_key_column(header)
+        return rows, chosen, True
     if ext == ".csv":
         import csv
         with path.open(encoding="utf-8-sig") as fh:
@@ -68,7 +87,8 @@ def _load_sheet(path: Path) -> tuple[list[dict], str, bool]:
         rows = [{header[i]: (r[i] if i < len(r) else "")
                  for i in range(len(header))}
                 for r in reader[1:] if any(c.strip() for c in r)]
-        return rows, "row", False
+        chosen = key_col or _detect_key_column(header)
+        return rows, chosen, False
     raise SignoffError(f"{path.name}: unsupported sheet type (expected .xlsx or .csv)")
 
 
@@ -96,7 +116,7 @@ def cmd_parse_template(args) -> int:
 
 def cmd_run(args) -> int:
     config = template.parse_template(Path(args.template), args.sheet)
-    rows, key, is_xlsx = _load_sheet(Path(args.sheet))
+    rows, key, is_xlsx = _load_sheet(Path(args.sheet), getattr(args, "key", None))
     results = runner.run(config, rows, key=key)
 
     out_dir = Path(args.out)
@@ -106,7 +126,7 @@ def cmd_run(args) -> int:
     # Audit log: structured, machine-readable, with full traceability.
     log_lines = [json.dumps({
         "sheet": args.sheet, "persona": config.persona,
-        "rows_loaded": len(rows), "results": [
+        "row_key": key, "rows_loaded": len(rows), "results": [
             {"check_id": r.check_id, "outcome": r.outcome,
              "matched": r.matched_rows, "failed": r.failed_rows,
              "denominator": r.denominator, "detail": r.detail}
@@ -195,6 +215,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sheet", required=True)
     p.add_argument("--template", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--key", default=None,
+                   help="column that identifies each row (auto-detected if omitted)")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("compare", help="compare two sheets row-by-row on a key")
