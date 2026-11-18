@@ -44,6 +44,13 @@
   button.go{background:#1f6feb;border:0;color:#fff;padding:.6rem 1.2rem;
     border-radius:8px;font:inherit;font-weight:600;cursor:pointer;margin:.4rem 0}
   button.go:disabled{background:#a5a9b0;cursor:not-allowed}
+  button.go .spin{display:inline-block;width:12px;height:12px;margin-right:.4rem;
+    border:2px solid #fff;border-top-color:transparent;border-radius:50%;
+    animation:spin .7s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  button.ghost{background:#fff;border:1px solid var(--line);color:var(--ink);
+    padding:.4rem .8rem;border-radius:8px;font:inherit;cursor:pointer;margin:.4rem .2rem 0 0}
+  button.ghost:hover{background:var(--bg)}
   .err{color:var(--fail);margin:.5rem 0;white-space:pre-wrap}
   .summary{background:var(--card);border:1px solid var(--line);border-radius:10px;
     padding:.8rem 1rem;margin:1rem 0;display:flex;gap:1rem;flex-wrap:wrap}
@@ -102,6 +109,8 @@
       <div class="preview"></div>
     </div>
     <button class="go" id="run-checks" disabled>Run checks</button>
+    <button class="ghost" id="validate-tpl" disabled>Check my template</button>
+    <button class="ghost" id="reset-checks">Start over</button>
     <div class="err" id="err-checks"></div>
     <div id="results-checks"></div>
   </section>
@@ -129,6 +138,7 @@
         <input id="cmp-tol" placeholder="e.g. 0.1"></label>
     </div>
     <button class="go" id="run-compare" disabled>Compare</button>
+    <button class="ghost" id="reset-compare">Start over</button>
     <div class="err" id="err-compare"></div>
     <div id="results-compare"></div>
   </section>
@@ -212,6 +222,7 @@ function showErr(bucket,msg){
 function refresh(){
   document.getElementById('run-checks').disabled =
     !(state.checks.sheet && state.checks.template);
+  document.getElementById('validate-tpl').disabled = !state.checks.template;
   document.getElementById('run-compare').disabled =
     !(state.compare.A && state.compare.B &&
       document.getElementById('cmp-key').value.trim() &&
@@ -234,11 +245,44 @@ function switchPane(p){
 // ---- Run checks ----
 document.getElementById('run-checks').onclick = async ()=>{
   showErr('checks','');
+  const btn = document.getElementById('run-checks');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Running…';
   const body = {sheet:state.checks.sheet.id, template:state.checks.template.id};
-  const r = await (await fetch('/api/checks',{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  let r;
+  try {
+    r = await (await fetch('/api/checks',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  } catch(e){ showErr('checks','request failed'); btn.disabled=false; btn.textContent='Run checks'; return; }
+  btn.disabled = false; btn.textContent = 'Run checks';
   if(!r.ok){showErr('checks',r.error);return;}
   renderChecks(r);
+};
+// Validate template (no run)
+document.getElementById('validate-tpl').onclick = async ()=>{
+  showErr('checks','');
+  const btn = document.getElementById('validate-tpl');
+  btn.disabled = true; btn.textContent = 'Checking…';
+  const r = await (await fetch('/api/validate-template',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({template:state.checks.template.id})})).json();
+  btn.disabled = false; btn.textContent = 'Check my template';
+  if(!r.ok){showErr('checks',r.error);return;}
+  const lines = [`✓ Template OK — persona: ${r.persona}, ${r.checks.length} check(s)`];
+  r.checks.forEach(c=>lines.push(`  ${c.id} [${c.machine?'machine':'HUMAN REVIEW'}] ${c.label}`));
+  showErr('checks', lines.join('\\n'));
+  document.getElementById('err-checks').style.color = 'var(--pass)';
+};
+// Reset
+document.getElementById('reset-checks').onclick = ()=>{
+  state.checks = {sheet:null, template:null};
+  ['drop-sheet','drop-template'].forEach(id=>{
+    const el = document.getElementById(id);
+    const n = el.querySelector('.name'); n.textContent=''; n.classList.remove('show');
+    const p = el.querySelector('.preview'); if(p) p.innerHTML='';
+  });
+  document.getElementById('results-checks').innerHTML = '';
+  showErr('checks','');
+  refresh();
 };
 
 function renderChecks(r){
@@ -277,14 +321,34 @@ function cardForCheck(x){
 // ---- Compare ----
 document.getElementById('run-compare').onclick = async ()=>{
   showErr('compare','');
+  const btn = document.getElementById('run-compare');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Comparing…';
   const body = {sheetA:state.compare.A.id, sheetB:state.compare.B.id,
     key:document.getElementById('cmp-key').value.trim(),
     fields:document.getElementById('cmp-fields').value.trim(),
     tolerance:document.getElementById('cmp-tol').value.trim()};
-  const r = await (await fetch('/api/compare',{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  let r;
+  try {
+    r = await (await fetch('/api/compare',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  } catch(e){ showErr('compare','request failed'); btn.disabled=false; btn.textContent='Compare'; return; }
+  btn.disabled = false; btn.textContent = 'Compare';
   if(!r.ok){showErr('compare',r.error);return;}
   renderCompare(r);
+};
+document.getElementById('reset-compare').onclick = ()=>{
+  state.compare = {A:null, B:null};
+  ['drop-A','drop-B'].forEach(id=>{
+    const el = document.getElementById(id);
+    const n = el.querySelector('.name'); n.textContent=''; n.classList.remove('show');
+    const p = el.querySelector('.preview'); if(p) p.innerHTML='';
+  });
+  document.getElementById('cmp-key').value='';
+  document.getElementById('cmp-fields').value='';
+  document.getElementById('cmp-tol').value='';
+  document.getElementById('results-compare').innerHTML = '';
+  showErr('compare','');
+  refresh();
 };
 function renderCompare(r){
   const t=r.totals;
@@ -297,7 +361,12 @@ function renderCompare(r){
     <div class="detail" style="margin-bottom:.6rem">${esc(r.summary)}</div>
     <div class="cards">` +
     r.rows.filter(x=>x.status!=='MATCHED').map(cardForDiff).join('') +
-    `</div>` + dlBlock(r.out,'compare');
+    `</div>
+    <details style="margin-top:.8rem"><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">
+      Show matched rows (${t.matched})</summary>
+      <div class="cards" style="margin-top:.6rem">` +
+      r.rows.filter(x=>x.status==='MATCHED').map(cardForDiff).join('') +
+    `</div></details>` + dlBlock(r.out,'compare');
   document.getElementById('results-compare').innerHTML = html;
 }
 function cardForDiff(x){
@@ -330,6 +399,7 @@ function dlBlock(out,mode='checks'){
     links.push(`<a href="/api/pack?out=${enc}&name=compare-report.csv">compare CSV</a>`);
     links.push(`<a href="/api/pack?out=${enc}&name=compare-log.jsonl">compare log</a>`);
   }
+  links.push(`<a href="/api/zip?out=${enc}">download all (zip)</a>`);
   return `<div class="dl">${links.join('')}</div>`;
 }
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}

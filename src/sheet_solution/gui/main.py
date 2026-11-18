@@ -58,7 +58,7 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
     from flask import Flask, request, jsonify, send_file, Response
 
     from sheet_solution.cli import cmd_run, cmd_compare, _load_sheet
-    from sheet_solution.sheets import compare as cmp_mod
+    from sheet_solution.sheets import compare as cmp_mod, template
     from sheet_solution.core.errors import SignoffError
     from sheet_solution import __version__
 
@@ -99,6 +99,21 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
         return jsonify({"ok": True, "id": spool.name, "name": dest.name,
                         "path": str(dest), "columns": columns,
                         "preview": preview, "row_count": len(rows) if rows else 0})
+
+    @app.post("/api/validate-template")
+    def validate_template():
+        body = request.get_json(force=True)
+        tmpl_id = body.get("template") or ""
+        try:
+            p = _spool_file(tmpl_id)
+            config = template.parse_template(p, "")
+        except Exception as exc:  # noqa: BLE001
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        return jsonify({"ok": True, "persona": config.persona,
+                        "checks": [{"id": c.check_id, "label": c.what_is_this_check_for,
+                                    "machine": c.machine_can_check,
+                                    "needs_human": c.needs_human}
+                                   for c in config.checks]})
 
     @app.post("/api/checks")
     def run_checks():
@@ -176,6 +191,22 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
             return send_file(str(target), as_attachment=True,
                             download_name=target.name)
         return jsonify({"ok": False, "error": "no pack"}), 404
+
+    @app.get("/api/zip")
+    def download_zip():
+        import zipfile, io
+        out = Path(request.args.get("out", "")).resolve()
+        if not out.exists() or not out.is_dir():
+            return jsonify({"ok": False, "error": "no pack"}), 404
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for p in sorted(out.rglob("*")):
+                if p.is_file():
+                    zf.write(p, p.relative_to(out))
+        buf.seek(0)
+        return send_file(buf, as_attachment=True,
+                        download_name=f"{out.name}.zip",
+                        mimetype="application/zip")
 
     return app
 
