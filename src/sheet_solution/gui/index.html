@@ -194,6 +194,7 @@ function renderPreview(el, r){
 }
 
 // Wire each drop zone.
+for (const key of Object.keys(dropOf)){
   const el = document.getElementById(dropOf[key]);
   const bucket = bucketOf[key];
   for (const ev of ['dragover','dragenter'])
