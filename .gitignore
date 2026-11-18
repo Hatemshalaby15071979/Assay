@@ -28,3 +28,5 @@ gui/__pycache__/
 dist/
 .build-venv/
 *.egg-info/
+build/
+.pytest_cache/
