@@ -125,11 +125,15 @@ const state = {checks:{sheet:null,template:null},compare:{A:null,B:null}};
 const dropOf = {sheet:'drop-sheet',template:'drop-template',
                 sheetA:'drop-A',sheetB:'drop-B'};
 
+// Which bucket each drop zone feeds. checks: sheet+template. compare: A+B.
+const bucketOf = {sheet:'checks', template:'checks', sheetA:'compare', sheetB:'compare'};
+// Within compare, drop-A stores as .A and drop-B as .B.
+const storeKey = {sheet:'sheet', template:'template', sheetA:'A', sheetB:'B'};
+
 // Wire each drop zone.
 for (const key of Object.keys(dropOf)){
   const el = document.getElementById(dropOf[key]);
-  const bucket = key in state.compare ? 'compare' : 'checks';
-  const sub   = key.startsWith('sheet') && key!=='sheet' ? key : key;
+  const bucket = bucketOf[key];
   for (const ev of ['dragover','dragenter'])
     el.addEventListener(ev, e=>{e.preventDefault();el.classList.add('drag')});
   for (const ev of ['dragleave','drop'])
@@ -137,9 +141,11 @@ for (const key of Object.keys(dropOf)){
   el.addEventListener('drop', async e=>{
     const file = e.dataTransfer.files[0]; if(!file) return;
     const fd = new FormData(); fd.append('file', file);
-    const r = await (await fetch('/api/upload',{method:'POST',body:fd})).json();
-    if(!r.ok){showErr(bucket,r.error);return;}
-    if (bucket==='checks') state.checks[key]=r; else state.compare[key]=r;
+    let r;
+    try { r = await (await fetch('/api/upload',{method:'POST',body:fd})).json(); }
+    catch { showErr(bucket,'upload failed — is the server running?'); return; }
+    if(!r.ok){showErr(bucket,r.error||'upload failed');return;}
+    if (bucket==='checks') state.checks[storeKey[key]]=r; else state.compare[storeKey[key]]=r;
     el.querySelector('.name').textContent='✓ '+r.name;
     el.querySelector('.name').classList.add('show');
     refresh();
