@@ -5,4 +5,4 @@ inherited unchanged; the sheet-specific check layer lives in
 `sheet_solution.sheets` and the CLI in `sheet_solution.cli`.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"

@@ -1,3 +1,12 @@
+## [0.2.1] — 2026-11-18
+
+### Fixed
+- **GUI drag-and-drop was completely broken**: a missing `for` loop header in
+  the drop-zone wiring made the entire JS invalid (`SyntaxError: Unexpected
+  token '}'`), so no file was ever uploaded and every button stayed
+  inactive — the GUI was effectively a static design. Restored the loop;
+  verified by a real-browser DOM-drag-and-drop regression test (now in CI).
+
 # Changelog
 
 All notable changes to Sheet Solution are recorded here.
