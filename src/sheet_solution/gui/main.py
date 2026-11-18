@@ -1,0 +1,211 @@
+"""Sheet Solution — offline GUI: drag-and-drop + visual result cards.
+
+A single-page local app. The user drags in:
+  - one sheet + one check-template  ->  "Run checks"  (the audit persona), or
+  - two sheets + a key + fields     ->  "Compare"     (the two-sheet case).
+
+Results render as **visual cards**: one card per check (or per diff row),
+color-coded — green PASS / red FAIL / amber PENDING-HUMAN, and for compare,
+green MATCHED / red CHANGED / blue only-in-A / orange only-in-B. Each card
+shows the exact details + the failing row ids, and the pack (CSV + JSON log +
+extracted images) is downloadable. Everything is on 127.0.0.1; no outbound
+calls; the engine is the same deterministic code the CLI runs.
+
+Launch:  python gui/main.py            # -> http://127.0.0.1:8477
+Requires the optional `gui` extra:  pip install "sheet-solution[gui]"
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+# Repo root: src/sheet_solution/gui/main.py -> parents[3] = repo root.
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "src"))
+
+# Files the GUI is allowed to read/upload (kept in a local spool, never the
+# whole filesystem).
+SPOOL = Path(tempfile.gettempdir()) / "sheet_solution_gui"
+
+
+def _new_spool_for(content: bytes) -> Path:
+    """Deterministic spool dir: named by the SHA-256 of the uploaded bytes.
+
+    No random ids (the platform bans uuid4/random — determinism invariant).
+    Identical uploads land in the same spool dir; the id is content-derived,
+    matching the spine's content-derived-ids philosophy.
+    """
+    digest = hashlib.sha256(content).hexdigest()
+    d = SPOOL / digest
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _load_rows(path: Path) -> list[dict]:
+    from sheet_solution.cli import _load_sheet
+    rows, _, _ = _load_sheet(path)
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# API handlers
+# ---------------------------------------------------------------------------
+def build_app():  # pragma: no cover - thin web shell; logic is in the engine
+    from flask import Flask, request, jsonify, send_file, Response
+
+    from sheet_solution.cli import cmd_run, cmd_compare, _load_sheet
+    from sheet_solution.sheets import compare as cmp_mod
+    from sheet_solution.core.errors import SignoffError
+    from sheet_solution import __version__
+
+    app = Flask(__name__)
+
+    @app.get("/")
+    def index():
+        return (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+
+    @app.get("/api/health")
+    def health():
+        return jsonify({"ok": True, "version": __version__,
+                        "offline": True, "spool": str(SPOOL)})
+
+    @app.post("/api/upload")
+    def upload():
+        """Stash a dropped file (sheet / template) into a content-named spool."""
+        f = request.files.get("file")
+        if f is None or not f.filename:
+            return jsonify({"ok": False, "error": "no file"}), 400
+        data = f.read()
+        spool = _new_spool_for(data)
+        dest = spool / Path(f.filename).name
+        dest.write_bytes(data)
+        return jsonify({"ok": True, "id": spool.name, "name": dest.name,
+                        "path": str(dest)})
+
+    @app.post("/api/checks")
+    def run_checks():
+        """Run the audit checks: one template + one sheet -> result cards."""
+        body = request.get_json(force=True)
+        sheet_id = body.get("sheet") or ""
+        tmpl_id = body.get("template") or ""
+        out = SPOOL / sheet_id / "out"
+        args = type("A", (), {})()
+        args.sheet = str(_spool_file(sheet_id))
+        args.template = str(_spool_file(tmpl_id))
+        args.out = str(out)
+        try:
+            rc = cmd_run(args)
+        except SignoffError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        if rc != 0:
+            return jsonify({"ok": False, "error": f"run exited {rc}"}), 400
+        results = _read_results_csv(out / "check-results.csv")
+        log = _read_jsonl(out / "audit-log.jsonl")
+        media = sorted(p.name for p in (out / "media").glob("*")) \
+            if (out / "media").exists() else []
+        return jsonify({"ok": True, "persona": log[0].get("persona") if log else "auditor",
+                        "results": results, "log": log, "media": media,
+                        "out": str(out)})
+
+    @app.post("/api/compare")
+    def do_compare():
+        """Two-sheet compare: two uploads + key + fields -> diff cards."""
+        body = request.get_json(force=True)
+        a_id, b_id = body.get("sheetA") or "", body.get("sheetB") or ""
+        key = body.get("key") or ""
+        fields = [f.strip() for f in (body.get("fields") or "").split(",") if f.strip()]
+        tolerance = body.get("tolerance") or ""
+        if not key or not fields:
+            return jsonify({"ok": False, "error": "key and fields are required"}), 400
+        a_path = _spool_file(a_id)
+        b_path = _spool_file(b_id)
+        # Distinct output dir per compare, named by the inputs + parameters so
+        # two different compares never collide (still deterministic, no random).
+        seed = (a_path.name + b_path.name + key + ",".join(fields)
+                + tolerance).encode("utf-8")
+        spool = _new_spool_for(seed)
+        a_rows = _load_rows(a_path)
+        b_rows = _load_rows(b_path)
+        result = cmp_mod.compare(a_rows, b_rows, key, fields, tolerance)
+        out = spool / "out"; out.mkdir(parents=True, exist_ok=True)
+        (out / "compare-report.csv").write_text(result.csv(), encoding="utf-8")
+        logrec = {"kind": "compare", "key": key, "fields": fields,
+                  "tolerance": tolerance,
+                  "totals": {"a": result.total_a, "b": result.total_b,
+                             "matched": result.matched, "changed": result.changed,
+                             "only_a": result.only_a, "only_b": result.only_b}}
+        (out / "compare-log.jsonl").write_text(json.dumps(logrec, sort_keys=True) + "\n",
+                                                encoding="utf-8")
+        return jsonify({"ok": True, "summary": result.summary(),
+                        "totals": logrec["totals"], "rows": [
+                            {"key": r.key, "status": r.status,
+                             "changed_fields": r.changed_fields,
+                             "a_value": r.a_value, "b_value": r.b_value}
+                            for r in result.rows], "out": str(out)})
+
+    @app.get("/api/pack")
+    def download_pack():
+        out = Path(request.args.get("out", "")).resolve()
+        files = {"csv": out / "check-results.csv",
+                 "ccsv": out / "compare-report.csv",
+                 "log": out / "audit-log.jsonl",
+                 "clog": out / "compare-log.jsonl"}
+        name = request.args.get("name", "")
+        target = next((p for k, p in files.items() if p.name == name), None)
+        if target is None:
+            target = next((p for p in files.values() if p.exists()), None)
+        if target and target.exists():
+            return send_file(str(target), as_attachment=True,
+                            download_name=target.name)
+        return jsonify({"ok": False, "error": "no pack"}), 404
+
+    return app
+
+
+def _spool_file(upload_id: str) -> Path:
+    """Each upload spool dir holds exactly one file; return its full path."""
+    d = SPOOL / upload_id
+    for p in sorted(d.iterdir()):
+        if p.is_file():
+            return p
+    raise FileNotFoundError(f"spool {upload_id} has no file")
+
+
+def _read_results_csv(path: Path) -> list[dict]:
+    import csv
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8") as fh:
+        return [dict(r) for r in csv.DictReader(fh)]
+
+
+def _read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    return [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines()
+            if ln.strip()]
+
+
+# ---------------------------------------------------------------------------
+# entry point
+# ---------------------------------------------------------------------------
+def main() -> int:  # pragma: no cover
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--port", type=int, default=8477)
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="bind host (default localhost only; do not expose)")
+    args = parser.parse_args()
+    SPOOL.mkdir(parents=True, exist_ok=True)
+    app = build_app()
+    print(f"Sheet Solution offline GUI on http://{args.host}:{args.port} "
+          f"(local only — no cloud)")
+    app.run(host=args.host, port=args.port)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

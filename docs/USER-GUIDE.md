@@ -88,6 +88,42 @@ python -m sheet_solution verify --out out/report
 If anything in the pack was changed after you ran it, this tells you. A clean
 pack prints `VERIFIED-STRUCTURE`.
 
+## "I have two sheets that should match — what changed?"
+
+That's the **compare** task. Instead of filling a check-template, you tell
+the tool the two sheets, the column that names "the same thing" (the row
+key), and the columns to compare.
+
+**In the GUI:** open the **Compare two sheets** tab, drop Sheet A and Sheet
+B, type the key + columns, click **Compare**. You get colour-coded cards:
+green = matched, red = changed, blue = only in A, orange = only in B.
+
+**From the terminal:**
+
+```
+python -m sheet_solution compare \
+  --sheet-a baseline.xlsx --sheet-b new.xlsx \
+  --key applicant_id --fields amount,status \
+  --out out/compare
+```
+
+The report (`out/compare/compare-report.csv`) shows, per item: which fields
+changed and the value on each side. Numbers can be compared with a tolerance
+(`--tolerance 0.1` means "within 0.1 is still the same"); leave it blank for
+exact. It's a count you can defend, not a "looks the same."
+
+## Using the drag-and-drop screen
+
+If you don't like the terminal, open the screen:
+
+```
+pip install "sheet-solution[gui]"
+python -m sheet_solution.gui.main      # opens http://127.0.0.1:8477
+```
+
+Drag your files into the boxes, click **Run** / **Compare**, and read the
+cards. Everything happens on this computer.
+
 ## Privacy
 
 Nothing you run is sent anywhere. The tool works on your machine, fully

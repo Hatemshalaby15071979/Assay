@@ -8,6 +8,6 @@ verify, ingest, mapping) is inherited from `sheet_solution.core`.
 No AI model in the check path. Image/semantic checks are flagged for a
 named human and recorded in the audit log.
 """
-from sheet_solution.sheets import template, runner, report, images
+from sheet_solution.sheets import template, runner, report, images, compare
 
-__all__ = ["template", "runner", "report", "images"]
+__all__ = ["template", "runner", "report", "images", "compare"]

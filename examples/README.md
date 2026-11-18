@@ -4,6 +4,8 @@ Everything here is **synthetic** — no real customer data, no PII.
 
 - `example-sheet.xlsx` — a small daily sheet (applicant rows + an embedded
   passport-style photo). This is what the CI Docker run and `make run` use.
+- `compare-baseline.xlsx` + `compare-new.xlsx` — a two-sheet pair for the
+  `compare` command.
 - `check-template.example.txt` — a filled-in check template covering all
   three check kinds:
   - `no blank` (machine) — a value must be present
@@ -28,3 +30,29 @@ You get:
   matched/failed/denominator and the failing row ids)
 - `out/report/audit-log.jsonl` — the structured, machine-readable log
 - `out/report/media/` — any embedded images a check needed a human to review
+
+## Compare two sheets
+
+When your task is "these two sheets should agree — what changed?" use the
+`compare` command (also available as the **Compare two sheets** tab in the
+GUI). Give it a row-key column, the columns to compare, and an optional
+numeric tolerance:
+
+```bash
+python -m sheet_solution compare \
+  --sheet-a examples/compare-baseline.xlsx \
+  --sheet-b examples/compare-new.xlsx \
+  --key item_id --fields amount,status \
+  --out out/compare
+```
+
+You get:
+
+- `out/compare/compare-report.csv` — one row per item, each labelled
+  `MATCHED` / `CHANGED` / `ONLY-IN-A` / `ONLY-IN-B`, with the exact fields
+  that changed and the values on both sides (full traceability)
+- `out/compare/compare-log.jsonl` — the structured log (totals + inputs)
+
+A `CHANGED` row names the differing columns; `ONLY-IN-A`/`ONLY-IN-B` are
+rows present on one side only. The result is a deterministic count, never a
+soft "looks the same".

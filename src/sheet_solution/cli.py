@@ -126,6 +126,39 @@ def cmd_run(args) -> int:
     return 0
 
 
+def cmd_compare(args) -> int:
+    """Compare two sheets row-by-row on a key; emit a diff report pack."""
+    from sheet_solution.sheets import compare as cmp_mod
+
+    a_rows, _, _ = _load_sheet(Path(args.sheet_a))
+    b_rows, _, _ = _load_sheet(Path(args.sheet_b))
+    fields = [f.strip() for f in args.fields.split(",") if f.strip()]
+    if not fields:
+        raise SignoffError("compare: at least one field to compare is required "
+                           "(comma-separated, e.g. 'name,amount')")
+
+    result = cmp_mod.compare(a_rows, b_rows, args.key, fields,
+                             tolerance=args.tolerance or "")
+
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "compare-report.csv").write_text(result.csv(), encoding="utf-8")
+    log = {
+        "kind": "compare",
+        "sheet_a": args.sheet_a, "sheet_b": args.sheet_b,
+        "key": args.key, "fields": fields, "tolerance": args.tolerance or "",
+        "totals": {"a": result.total_a, "b": result.total_b,
+                   "matched": result.matched, "changed": result.changed,
+                   "only_a": result.only_a, "only_b": result.only_b},
+    }
+    (out_dir / "compare-log.jsonl").write_text(
+        json.dumps(log, sort_keys=True) + "\n", encoding="utf-8")
+
+    print(result.summary())
+    print(f"compare report -> {args.out}/compare-report.csv")
+    return 0
+
+
 def cmd_verify(args) -> int:
     out_dir = Path(args.out)
     results_csv = out_dir / "check-results.csv"
@@ -163,6 +196,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--template", required=True)
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser("compare", help="compare two sheets row-by-row on a key")
+    p.add_argument("--sheet-a", required=True, help="baseline sheet")
+    p.add_argument("--sheet-b", required=True, help="new / other sheet")
+    p.add_argument("--key", required=True, help="row-key column (identifies the same thing)")
+    p.add_argument("--fields", required=True,
+                   help="comma-separated columns to compare, e.g. 'name,amount'")
+    p.add_argument("--tolerance", default="",
+                   help="numeric tolerance for compared fields (blank = exact)")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_compare)
 
     p = sub.add_parser("verify", help="re-check a produced report pack structure")
     p.add_argument("--out", required=True)

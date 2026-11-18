@@ -40,6 +40,11 @@ where = ["src"]
 [tool.setuptools.package-dir]
 "" = "src"
 
+# The GUI ships its single-page app as package data so `import sheet_solution.gui`
+# can find index.html next to main.py inside the installed wheel.
+[tool.setuptools.package-data]
+"sheet_solution.gui" = ["*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

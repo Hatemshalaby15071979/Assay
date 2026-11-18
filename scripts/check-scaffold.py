@@ -45,6 +45,10 @@ REQUIRED = [
     "src/sheet_solution/sheets/__init__.py",
     "src/sheet_solution/sheets/template.py", "src/sheet_solution/sheets/runner.py",
     "src/sheet_solution/sheets/report.py", "src/sheet_solution/sheets/images.py",
+    "src/sheet_solution/sheets/compare.py",
+    # GUI package (offline drag-and-drop + visual cards)
+    "src/sheet_solution/gui/__init__.py", "src/sheet_solution/gui/main.py",
+    "src/sheet_solution/gui/index.html",
     # inherited spine modules
     "src/sheet_solution/core/engine/hash_chain.py",
     "src/sheet_solution/core/verify/verify_pack.py",
@@ -53,6 +57,7 @@ REQUIRED = [
     "src/sheet_solution/core/model/decision_event.py",
     # tests
     "tests/conftest.py", "tests/test_scaffold.py", "tests/test_sheets.py",
+    "tests/test_compare.py", "tests/test_gui.py",
     # docs
     "docs/ARCHITECTURE.md", "docs/USER-GUIDE.md",
     # examples

@@ -65,10 +65,27 @@ python -m sheet_solution run --sheet examples/example-sheet.xlsx \
 python -m sheet_solution verify --out out/report     # -> VERIFIED-STRUCTURE
 ```
 
+## Also: compare two sheets
+
+When your task is *"these two sheets should match — what changed?"*, use the
+`compare` command (or the **Compare two sheets** tab in the GUI). It labels
+every row MATCHED / CHANGED / ONLY-IN-A / ONLY-IN-B with field-level
+traceability and an optional numeric tolerance — a defensible count, never a
+"looks the same".
+
+```bash
+python -m sheet_solution compare \
+  --sheet-a examples/compare-baseline.xlsx \
+  --sheet-b examples/compare-new.xlsx \
+  --key item_id --fields amount,status --out out/compare
+```
+
 ## Three ways to use it (all offline)
 
-- **CLI** — `python -m sheet_solution …` (fast, scriptable, cron-able).
-- **GUI** — `python gui/main.py` opens a local browser UI on `127.0.0.1`.
+- **CLI** — `python -m sheet_solution …` (fast, scriptable, cron-able),
+  including `run` (audit) and `compare` (two sheets).
+- **GUI** — `python -m sheet_solution.gui.main` opens a local browser UI on
+  `127.0.0.1`: drag-and-drop files, click, read colour-coded result cards.
 - **Docker** — the non-root image runs under `--network none`.
 
 ## Where the pieces come from

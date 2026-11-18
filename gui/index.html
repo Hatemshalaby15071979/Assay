@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sheet Solution — offline checks</title>
+<style>
+  :root{--pass:#1a7f37;--fail:#cf222e;--human:#9a6700;--match:#1a7f37;
+        --changed:#cf222e;--onlyA:#0969da;--onlyB:#bc4c00;
+        --card:#fff;--bg:#f6f8fa;--line:#d0d7de;--ink:#1f2328;--muted:#656d76}
+  *{box-sizing:border-box}
+  body{font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       margin:0;background:var(--bg);color:var(--ink)}
+  header{background:#24292f;color:#fff;padding:.9rem 1.4rem}
+  header h1{margin:0;font-size:1.15rem;font-weight:600}
+  header .sub{color:#9aa4b2;font-size:.85rem;margin-top:.15rem}
+  .wrap{max-width:960px;margin:0 auto;padding:1.2rem}
+  .tabs{display:flex;gap:.4rem;margin-bottom:1rem}
+  .tabs button{padding:.5rem 1rem;border:1px solid var(--line);background:#fff;
+    border-radius:8px 8px 0 0;cursor:pointer;font:inherit;color:var(--ink)}
+  .tabs button.active{background:#24292f;color:#fff;border-color:#24292f}
+  .drop{border:2px dashed var(--line);border-radius:10px;padding:1.1rem;margin:.6rem 0;
+    background:var(--card);transition:.15s}
+  .drop.drag{border-color:var(--onlyA);background:#f0f6ff}
+  .drop .lbl{font-weight:600;margin-bottom:.4rem}
+  .drop .hint{color:var(--muted);font-size:.82rem}
+  .drop .name{margin-top:.5rem;font-family:ui-monospace,monospace;font-size:.85rem;
+    background:#f6f8fa;padding:.3rem .5rem;border-radius:6px;display:none}
+  .drop .name.show{display:block}
+  .row{display:flex;gap:.6rem;flex-wrap:wrap;margin:.6rem 0}
+  .row label{flex:1;min-width:160px;font-size:.85rem;color:var(--muted)}
+  .row input{width:100%;padding:.45rem .6rem;border:1px solid var(--line);
+    border-radius:6px;font:inherit}
+  button.go{background:#1f6feb;border:0;color:#fff;padding:.6rem 1.2rem;
+    border-radius:8px;font:inherit;font-weight:600;cursor:pointer;margin:.4rem 0}
+  button.go:disabled{background:#a5a9b0;cursor:not-allowed}
+  .err{color:var(--fail);margin:.5rem 0;white-space:pre-wrap}
+  .summary{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:.8rem 1rem;margin:1rem 0;display:flex;gap:1rem;flex-wrap:wrap}
+  .summary .chip{font-size:.8rem;color:var(--muted)}
+  .summary b{font-size:1.3rem;display:block;color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:.8rem;margin-top:.6rem}
+  .card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--line);
+    border-radius:10px;padding:.8rem .9rem}
+  .card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem}
+  .card .title{font-weight:600}
+  .badge{font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;color:#fff}
+  .card .detail{color:var(--muted);font-size:.85rem;margin:.25rem 0}
+  .card .kv{font-family:ui-monospace,monospace;font-size:.78rem;background:#f6f8fa;
+    padding:.35rem .5rem;border-radius:6px;margin-top:.4rem;white-space:pre-wrap;word-break:break-word}
+  .card .failrows{margin-top:.4rem;font-size:.8rem}
+  .card .failrows span{background:#ffebe9;color:var(--fail);padding:.1rem .4rem;
+    border-radius:5px;margin:.15rem .15rem .15rem 0;display:inline-block}
+  .pass{border-left-color:var(--pass)} .fail{border-left-color:var(--fail)}
+  .human{border-left-color:var(--human)}
+  .b-pass{background:var(--pass)} .b-fail{background:var(--fail)}
+  .b-human{background:var(--human)} .b-match{background:var(--match)}
+  .b-changed{background:var(--changed)} .b-onlyA{background:var(--onlyA)}
+  .b-onlyB{background:var(--onlyB)}
+  .media{margin-top:1rem}
+  .media img{max-width:160px;border:1px solid var(--line);border-radius:8px;margin:.3rem}
+  .dl{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+  .dl a{font-size:.82rem;padding:.35rem .7rem;border:1px solid var(--line);
+    border-radius:6px;color:var(--onlyA);text-decoration:none;background:#fff}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sheet Solution</h1>
+  <div class="sub">Offline — your data stays on this machine. Drag in files, run, read the cards.</div>
+</header>
+<div class="wrap">
+  <div class="tabs">
+    <button id="tab-checks" class="active">Run checks</button>
+    <button id="tab-compare">Compare two sheets</button>
+  </div>
+
+  <!-- ============ RUN CHECKS ============ -->
+  <section id="pane-checks">
+    <div class="drop" data-for="sheet" id="drop-sheet">
+      <div class="lbl">1 · Sheet</div>
+      <div class="hint">Drag your daily sheet here (Excel .xlsx or .csv).</div>
+      <div class="name"></div>
+    </div>
+    <div class="drop" data-for="template" id="drop-template">
+      <div class="lbl">2 · What to look for</div>
+      <div class="hint">Drag your filled check-template (the plain-English file).</div>
+      <div class="name"></div>
+    </div>
+    <button class="go" id="run-checks" disabled>Run checks</button>
+    <div class="err" id="err-checks"></div>
+    <div id="results-checks"></div>
+  </section>
+
+  <!-- ============ COMPARE TWO SHEETS ============ -->
+  <section id="pane-compare" class="hidden">
+    <div class="drop" data-for="sheetA" id="drop-A">
+      <div class="lbl">1 · Sheet A (baseline)</div>
+      <div class="hint">Drag the first sheet.</div>
+      <div class="name"></div>
+    </div>
+    <div class="drop" data-for="sheetB" id="drop-B">
+      <div class="lbl">2 · Sheet B (new / other)</div>
+      <div class="hint">Drag the second sheet.</div>
+      <div class="name"></div>
+    </div>
+    <div class="row">
+      <label>Row key column (identifies the same thing)
+        <input id="cmp-key" placeholder="e.g. applicant_id"></label>
+      <label>Columns to compare (comma-separated)
+        <input id="cmp-fields" placeholder="e.g. amount,status"></label>
+      <label>Numeric tolerance (blank = exact)
+        <input id="cmp-tol" placeholder="e.g. 0.1"></label>
+    </div>
+    <button class="go" id="run-compare" disabled>Compare</button>
+    <div class="err" id="err-compare"></div>
+    <div id="results-compare"></div>
+  </section>
+</div>
+
+<script>
+const state = {checks:{sheet:null,template:null},compare:{A:null,B:null}};
+const dropOf = {sheet:'drop-sheet',template:'drop-template',
+                sheetA:'drop-A',sheetB:'drop-B'};
+
+// Wire each drop zone.
+for (const key of Object.keys(dropOf)){
+  const el = document.getElementById(dropOf[key]);
+  const bucket = key in state.compare ? 'compare' : 'checks';
+  const sub   = key.startsWith('sheet') && key!=='sheet' ? key : key;
+  for (const ev of ['dragover','dragenter'])
+    el.addEventListener(ev, e=>{e.preventDefault();el.classList.add('drag')});
+  for (const ev of ['dragleave','drop'])
+    el.addEventListener(ev, e=>{e.preventDefault();el.classList.remove('drag')});
+  el.addEventListener('drop', async e=>{
+    const file = e.dataTransfer.files[0]; if(!file) return;
+    const fd = new FormData(); fd.append('file', file);
+    const r = await (await fetch('/api/upload',{method:'POST',body:fd})).json();
+    if(!r.ok){showErr(bucket,r.error);return;}
+    if (bucket==='checks') state.checks[key]=r; else state.compare[key]=r;
+    el.querySelector('.name').textContent='✓ '+r.name;
+    el.querySelector('.name').classList.add('show');
+    refresh();
+  });
+}
+
+function showErr(bucket,msg){
+  const el = document.getElementById('err-'+(bucket==='checks'?'checks':'compare'));
+  el.textContent = msg||''; el.style.display = msg?'block':'none';
+}
+function refresh(){
+  document.getElementById('run-checks').disabled =
+    !(state.checks.sheet && state.checks.template);
+  document.getElementById('run-compare').disabled =
+    !(state.compare.A && state.compare.B &&
+      document.getElementById('cmp-key').value.trim() &&
+      document.getElementById('cmp-fields').value.trim());
+}
+document.getElementById('cmp-key').addEventListener('input',refresh);
+document.getElementById('cmp-fields').addEventListener('input',refresh);
+document.getElementById('cmp-tol').addEventListener('input',refresh);
+
+// Tabs.
+document.getElementById('tab-checks').onclick=()=>switchPane('checks');
+document.getElementById('tab-compare').onclick=()=>switchPane('compare');
+function switchPane(p){
+  document.getElementById('pane-checks').classList.toggle('hidden',p!=='checks');
+  document.getElementById('pane-compare').classList.toggle('hidden',p!=='compare');
+  document.getElementById('tab-checks').classList.toggle('active',p==='checks');
+  document.getElementById('tab-compare').classList.toggle('active',p==='compare');
+}
+
+// ---- Run checks ----
+document.getElementById('run-checks').onclick = async ()=>{
+  showErr('checks','');
+  const body = {sheet:state.checks.sheet.id, template:state.checks.template.id};
+  const r = await (await fetch('/api/checks',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  if(!r.ok){showErr('checks',r.error);return;}
+  renderChecks(r);
+};
+
+function renderChecks(r){
+  const tot = {pass:0,fail:0,human:0};
+  r.results.forEach(x=>{
+    const k = x.outcome==='PASS'?'pass':(x.outcome==='FAIL'?'fail':'human');
+    tot[k]++;
+  });
+  const html = `<div class="summary">
+      <div class="chip"><b>${tot.pass}</b>passed</div>
+      <div class="chip"><b>${tot.fail}</b>failed</div>
+      <div class="chip"><b>${tot.human}</b>needs a human</div>
+      <div class="chip"><b>${r.results.length}</b>checks · persona: ${r.persona}</div>
+    </div>
+    <div class="cards">` + r.results.map(cardForCheck).join('') + `</div>` +
+    mediaBlock(r.media, r.out) + dlBlock(r.out);
+  document.getElementById('results-checks').innerHTML = html;
+}
+function cardForCheck(x){
+  const cls  = x.outcome==='PASS'?'pass':(x.outcome==='FAIL'?'fail':'human');
+  const badg = x.outcome==='PASS'?'b-pass':(x.outcome==='FAIL'?'b-fail':'b-human');
+  const failrows = (x.outcome==='FAIL' && x.failed_row_ids) ?
+    `<div class="failrows">Rows: `+ x.failed_row_ids.split(';').filter(Boolean)
+        .map(id=>`<span>${esc(id)}</span>`).join('') + `</div>` : '';
+  return `<div class="card ${cls}">
+      <div class="top"><span class="title">${esc(x.label)}</span>
+        <span class="badge ${badg}">${x.outcome}</span></div>
+      <div class="detail">${esc(x.detail||'')}</div>
+      ${x.outcome==='PENDING-HUMAN'?
+        `<div class="detail">A person must open the image and confirm — the tool recorded this, not a guess.</div>`:''}
+      ${failrows}
+      <div class="kv">${esc(x.check_id)} · ${x.matched_rows}/${x.denominator} rows ok · ${x.failed_rows} failing</div>
+    </div>`;
+}
+
+// ---- Compare ----
+document.getElementById('run-compare').onclick = async ()=>{
+  showErr('compare','');
+  const body = {sheetA:state.compare.A.id, sheetB:state.compare.B.id,
+    key:document.getElementById('cmp-key').value.trim(),
+    fields:document.getElementById('cmp-fields').value.trim(),
+    tolerance:document.getElementById('cmp-tol').value.trim()};
+  const r = await (await fetch('/api/compare',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  if(!r.ok){showErr('compare',r.error);return;}
+  renderCompare(r);
+};
+function renderCompare(r){
+  const t=r.totals;
+  const html = `<div class="summary">
+      <div class="chip"><b>${t.matched}</b>matched</div>
+      <div class="chip"><b>${t.changed}</b>changed</div>
+      <div class="chip"><b>${t.only_a}</b>only in A</div>
+      <div class="chip"><b>${t.only_b}</b>only in B</div>
+    </div>
+    <div class="detail" style="margin-bottom:.6rem">${esc(r.summary)}</div>
+    <div class="cards">` +
+    r.rows.filter(x=>x.status!=='MATCHED').map(cardForDiff).join('') +
+    `</div>` + dlBlock(r.out,'ccsv','clog');
+  document.getElementById('results-compare').innerHTML = html;
+}
+function cardForDiff(x){
+  const map = {CHANGED:['changed','b-changed'], 'ONLY-IN-A':['onlyA','b-onlyA'],
+               'ONLY-IN-B':['onlyB','b-onlyB'], MATCHED:['match','b-match']};
+  const [cls,badg]=map[x.status]||['',''];
+  const vals = (v)=>Object.entries(v).map(([k,val])=>k+'='+val).join('  ·  ')||'—';
+  return `<div class="card ${cls}">
+      <div class="top"><span class="title">${esc(x.key)}</span>
+        <span class="badge ${badg}">${x.status}</span></div>
+      ${x.changed_fields?`<div class="detail">Changed: ${esc(x.changed_fields.join(', '))}</div>`:''}
+      <div class="kv">A: ${esc(vals(x.a_value))}\nB: ${esc(vals(x.b_value))}</div>
+    </div>`;
+}
+
+function mediaBlock(media,out){
+  if(!media||!media.length)return '';
+  return `<div class="media"><b>Images to review (${media.length})</b><br>`+
+    media.map(n=>`<img src="/api/pack?out=${encodeURIComponent(out)}&name=${n}">`).join('')+
+    `</div>`;
+}
+function dlBlock(out,csvKey='csv',logKey='log'){
+  const c = out?`<a href="/api/pack?out=${encodeURIComponent(out)}&name=check-results.csv">report CSV</a>`:'';
+  const l = out?`<a href="/api/pack?out=${encodeURIComponent(out)}&name=audit-log.jsonl">audit log</a>`:'';
+  const cc= out?`<a href="/api/pack?out=${encodeURIComponent(out)}&name=compare-report.csv">compare CSV</a>`:'';
+  const cl= out?`<a href="/api/pack?out=${encodeURIComponent(out)}&name=compare-log.jsonl">compare log</a>`:'';
+  return `<div class="dl">${c}${l}${cc}${cl}</div>`;
+}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+</script>
+</body>
+</html>
