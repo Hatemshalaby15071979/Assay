@@ -17,9 +17,10 @@ if [ ! -x "$PY" ]; then
 
   if [ -d "vendor/wheels" ] && ls *.whl >/dev/null 2>&1; then
     echo ">> installing tool + offline deps from vendored wheels (no network)"
-    # Deps from the vendored wheel set (host-platform). Best-effort hash check;
-    # the canonical hash-anchored path is the Docker image (Python 3.11).
+    # Deps from the vendored wheel set (host-platform). Best-effort.
     "$PY" -m pip install --no-index --find-links vendor/wheels fpdf2 openpyxl || true
+    # Optional GUI extra (flask) — best-effort, so the GUI works offline too.
+    "$PY" -m pip install --no-index --find-links vendor/wheels flask 2>/dev/null || true
     # The tool itself, from the bundled wheel, offline.
     "$PY" -m pip install --no-index --find-links vendor/wheels ./*.whl
   else

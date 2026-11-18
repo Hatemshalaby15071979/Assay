@@ -39,13 +39,16 @@ echo ">> vendoring offline wheels (for no-network installs)"
     fpdf2==2.8.8 openpyxl==3.1.5 2>/dev/null \
   || "$BPY" -m pip download --only-binary=:all: --dest "$BUNDLE/vendor/wheels" \
        fpdf2 openpyxl
+# Optional GUI extra (flask + its transitive deps) so the GUI works offline.
+"$BPY" -m pip download --only-binary=:all: --dest "$BUNDLE/vendor/wheels" \
+    "flask==3.0.3" 2>/dev/null || true
 
 echo ">> assembling bundle"
 cp "$OUT"/*.whl "$BUNDLE/"
 # Include the lock file where install.sh expects it for offline installs.
 cp requirements.lock "$BUNDLE/vendor/wheels/requirements.lock"
-cp run.sh install.sh "$BUNDLE/"
-chmod +x "$BUNDLE/run.sh" "$BUNDLE/install.sh"
+cp run.sh install.sh gui.sh "$BUNDLE/"
+chmod +x "$BUNDLE/run.sh" "$BUNDLE/install.sh" "$BUNDLE/gui.sh"
 cp -r gui "$BUNDLE/gui"
 cp README.md SECURITY.md LICENSE PROVENANCE.md "$BUNDLE/"
 mkdir -p "$BUNDLE/docs" "$BUNDLE/examples"

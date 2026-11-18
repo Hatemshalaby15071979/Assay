@@ -125,9 +125,9 @@ const state = {checks:{sheet:null,template:null},compare:{A:null,B:null}};
 const dropOf = {sheet:'drop-sheet',template:'drop-template',
                 sheetA:'drop-A',sheetB:'drop-B'};
 
-// Which bucket each drop zone feeds. checks: sheet+template. compare: A+B.
+// Which bucket each drop zone feeds, and where its upload is stored.
+// checks: sheet+template. compare: sheetA->.A, sheetB->.B (matches refresh()).
 const bucketOf = {sheet:'checks', template:'checks', sheetA:'compare', sheetB:'compare'};
-// Within compare, drop-A stores as .A and drop-B as .B.
 const storeKey = {sheet:'sheet', template:'template', sheetA:'A', sheetB:'B'};
 
 // Wire each drop zone.
