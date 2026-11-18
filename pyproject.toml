@@ -1,0 +1,49 @@
+# Sheet Solution — pyproject.toml
+# Offline, deterministic sheet-audit platform. Reused spine from Signoff 0.1.0
+# (see PROVENANCE.md); new sheet-comparison layer is `sheet_solution.sheets`.
+# Runtime: Python 3.11+ standard library + one pinned pure-Python PDF lib
+# (fpdf2, inherited for the signable dossier). No network at runtime.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sheet-solution"
+version = "0.1.0"
+description = "Offline, deterministic, auditable sheet-audit platform: feed it what to look for, it runs the checks and produces a logged, hash-chained report. No network, no model in the check path, PII stays local."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Hatem Shalaby" }]
+dependencies = [
+    "fpdf2==2.8.8",   # pinned pure-Python PDF library (inherited spine)
+]
+
+[project.optional-dependencies]
+xlsx = ["openpyxl==3.1.5"]
+gui = ["flask==3.0.3"]
+dev = [
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "fpdf2==2.8.8",
+    "openpyxl==3.1.5",
+    "pillow==13.0.0",
+]
+
+[project.scripts]
+sheet-solution = "sheet_solution.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/sheet_solution"]

@@ -1,0 +1,55 @@
+# Sheet Solution — example check-template.
+#
+# Copy this to your own file and fill each [CHECK] block in plain English.
+# You do NOT need to know YAML or JSON. One [CHECK] = one thing you look for.
+# The tool reads these blocks, proves back what it understood, and runs them.
+
+# A person who AUDITS (checks the sheet against a compliance standard):
+
+[CHECK]
+check_id = CH-001
+what_is_this_check_for = Every applicant has a passport photo attached
+what_to_look_at = the passport_photo column, one photo per applicant row
+expected_value_or_rule = no blank
+when_it_fails_say = No passport photo attached for this applicant
+machine_can_check = yes
+column_name = passport_photo
+example_that_passes = an applicant row that has a photo in the cell
+example_that_fails = an applicant row with an empty photo cell
+
+[CHECK]
+check_id = CH-002
+what_is_this_check_for = QA score meets the passing threshold
+what_to_look_at = the qa_score column
+expected_value_or_rule = >= 60
+when_it_fails_say = QA score is below the passing threshold
+machine_can_check = yes
+column_name = qa_score
+example_that_passes = a row with qa_score 95
+example_that_fails = a row with qa_score 41
+
+# A person who VERIFIES (checks that specific expected values are present):
+
+[CHECK]
+check_id = CH-003
+what_is_this_check_for = Every applicant has a recorded review status
+what_to_look_at = the review_status column
+expected_value_or_rule = no blank
+when_it_fails_say = Review status is missing for this applicant
+machine_can_check = yes
+column_name = review_status
+example_that_passes = a row with review_status "approved"
+example_that_fails = a row with an empty review_status cell
+
+# Something a machine can NOT judge by rule -> a human looks at the image:
+
+[CHECK]
+check_id = CH-004
+what_is_this_check_for = The passport photo shows a clear, usable face
+what_to_look_at = the embedded passport photo for each applicant
+expected_value_or_rule = a clear, unobstructed frontal face
+when_it_fails_say = Passport photo is not usable
+machine_can_check = no
+human_review_note = Open the extracted image in out/report/media and confirm.
+example_that_passes = a clear frontal face photo
+example_that_fails = a blurry, blocked, or missing face

@@ -1,0 +1,4 @@
+applicant_id,name,photo,qa_score
+A1,Ada,p1,95
+A2,Ben,,80
+A3,Cara,p3,42

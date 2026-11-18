@@ -1,0 +1,37 @@
+# Sheet Solution — daily-sheet audit template (plain English, no YAML).
+
+# Persona: auditor (checks the sheet against a compliance standard)
+# One [CHECK] block per thing you look for. Fill every field.
+
+[CHECK]
+check_id = CHECK-001
+what_is_this_check_for = Passport photo attached
+what_to_look_at = photo column, one photo per applicant row
+expected_value_or_rule = no blank
+when_it_fails_say = No passport photo for this applicant
+machine_can_check = yes
+column_name = photo
+example_that_passes = applicant row A1 with a photo in the cell
+example_that_fails = applicant row A2 with an empty photo cell
+
+[CHECK]
+check_id = CHECK-002
+what_is_this_check_for = QA score at least passing threshold
+what_to_look_at = qa_score column
+expected_value_or_rule = >= 60
+when_it_fails_say = QA score below the passing threshold
+machine_can_check = yes
+column_name = qa_score
+example_that_passes = a row with qa_score 95
+example_that_fails = a row with qa_score 42
+
+[CHECK]
+check_id = CHECK-003
+what_is_this_check_for = Face is legible on the passport photo
+what_to_look_at = the embedded passport image
+expected_value_or_rule = a clear, unobstructed face photo
+when_it_fails_say = Passport photo not usable
+machine_can_check = no
+human_review_note = Reviewer must open the extracted image and confirm.
+example_that_passes = a clear frontal face photo
+example_that_fails = a blurry or blocked photo

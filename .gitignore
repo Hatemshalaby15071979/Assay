@@ -1,0 +1,30 @@
+# Python build / cache artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+*.egg
+
+# Local-only artifacts — not part of the tool, not used by source or CI
+node_modules/
+segments/
+concat.txt
+package.json
+package-lock.json
+
+# Sensitive owner-supplied material — never commit real data or questionnaires
+OWNER/questionnaires/
+OWNER/real-data/
+out/
+.coverage
+
+# Sheet Solution
+out/
+gui/__pycache__/
+.vendor/
+# build + release artifacts
+dist/
+.build-venv/
+*.egg-info/

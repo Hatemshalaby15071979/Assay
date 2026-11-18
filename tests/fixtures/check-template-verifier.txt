@@ -1,0 +1,12 @@
+# Verifier persona: expected values must be present in the sheet.
+
+[CHECK]
+check_id = V-1
+what_is_this_check_for = Required amount value must be present
+what_to_look_at = amount column
+expected_value_or_rule = must equal 100
+when_it_fails_say = expected amount 100 not present
+machine_can_check = yes
+column_name = amount
+example_that_passes = a row with amount 100
+example_that_fails = a row with amount 0

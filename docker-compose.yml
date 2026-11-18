@@ -1,0 +1,18 @@
+# Sheet Solution docker-compose — local, offline use pattern only.
+# Input is mounted READ-ONLY; output is a writable single directory.
+# No ports are published: there is no server, no API, no network call.
+services:
+  run:
+    build: .
+    image: sheet-solution:0.1.0
+    user: sheetsol
+    read_only: true
+    network_mode: none
+    entrypoint: ["python", "-m", "sheet_solution"]
+    command: ["run",
+              "--sheet", "/data/example-sheet.xlsx",
+              "--template", "/data/check-template.example.txt",
+              "--out", "/out/report"]
+    volumes:
+      - ./examples:/data:ro
+      - ./out/docker-report:/out
