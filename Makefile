@@ -33,7 +33,7 @@ run:
 all: check-scaffold check-offline test demo
 
 gui:
-	PYTHONPATH=src $(PYTHON) gui/main.py
+	bash gui.sh
 
 release:
 	bash scripts/make-release.sh

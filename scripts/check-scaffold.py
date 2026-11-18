@@ -36,7 +36,7 @@ REQUIRED = [
     # packaging
     "requirements.lock",
     # tool entry points
-    "run.sh", "gui/main.py", "gui/README.md",
+    "run.sh", "gui.sh", "gui/main.py", "gui/README.md",
     # source spine (inherited) + new sheet layer
     "src/sheet_solution/__init__.py", "src/sheet_solution/__main__.py",
     "src/sheet_solution/cli.py",
