@@ -652,6 +652,32 @@ const RUN_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use h
 const COMPARE_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-compare"/></svg><span>Compare</span><kbd>↵</kbd>';
 const PLAN_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg><span>Plan decisions</span><kbd>↵</kbd>';
 
+// Read a response safely: if the server returns a non-JSON body (e.g. an HTML
+// 500 page) show the status + snippet instead of a misleading "node down".
+async function apiJson(resp){
+  const text = await resp.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; }
+  catch {
+    const snip = (text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    throw new Error(`Server error ${resp.status}: ${snip || 'empty response'}`);
+  }
+  if(!resp.ok && !data.error) data.error = `Server error ${resp.status}`;
+  return data;
+}
+async function postJSON(path, payload){
+  let resp;
+  try { resp = await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); }
+  catch(e){ throw new Error('Cannot reach the local node — is it still running? ('+e.message+')'); }
+  return apiJson(resp);
+}
+async function postForm(path, fd){
+  let resp;
+  try { resp = await fetch(path,{method:'POST',body:fd}); }
+  catch(e){ throw new Error('Cannot reach the local node — is it still running? ('+e.message+')'); }
+  return apiJson(resp);
+}
+
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
 fileInput.style.display = 'none';
@@ -664,8 +690,8 @@ fileInput.addEventListener('change', async ()=>{
   const fd = new FormData(); fd.append('file', file);
   const bucket = bucketOf[pendingKey];
   let r;
-  try { r = await (await fetch('/api/upload',{method:'POST',body:fd})).json(); }
-  catch { showErr(bucket,'Upload failed. Is the local node running?'); pendingKey=null; fileInput.value=''; return; }
+  try { r = await postForm('/api/upload', fd); }
+  catch(e){ showErr(bucket, e.message); pendingKey=null; fileInput.value=''; return; }
   if(!r.ok){ showErr(bucket, r.error || 'Upload failed.'); pendingKey=null; fileInput.value=''; return; }
   storeUpload(pendingKey, r);
   pendingKey=null; fileInput.value='';
@@ -716,8 +742,8 @@ for (const key of Object.keys(dropOf)){
     const file = e.dataTransfer.files[0]; if(!file) return;
     const fd = new FormData(); fd.append('file', file);
     let r;
-    try { r = await (await fetch('/api/upload',{method:'POST',body:fd})).json(); }
-    catch { showErr(bucket,'Upload failed. Is the local node running?'); return; }
+    try { r = await postForm('/api/upload', fd); }
+    catch(e){ showErr(bucket, e.message); return; }
     if(!r.ok){ showErr(bucket, r.error || 'Upload failed.'); return; }
     storeUpload(key, r);
   });
@@ -789,11 +815,9 @@ document.getElementById('run-checks').onclick = async ()=>{
   liveStatus('Running checks.');
   const body = {sheet:state.checks.sheet.id, template:state.checks.template.id};
   let r;
-  try {
-    r = await (await fetch('/api/checks',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  } catch(e){
-    showErr('checks','Request failed. Is the local node running?');
+  try { r = await postJSON('/api/checks', body); }
+  catch(e){
+    showErr('checks', e.message);
     btn.disabled=false; btn.innerHTML=RUN_LABEL; setReadoutState('checks','Error'); return;
   }
   btn.disabled = false; btn.innerHTML = RUN_LABEL;
@@ -810,12 +834,9 @@ document.getElementById('validate-tpl').onclick = async ()=>{
   const label = btn.innerHTML;
   btn.disabled = true; btn.textContent = 'Checking';
   let r;
-  try {
-    r = await (await fetch('/api/validate-template',{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({template:state.checks.template.id})})).json();
-  } catch(e){
-    showErr('checks','Request failed. Is the local node running?');
+  try { r = await postJSON('/api/validate-template', {template:state.checks.template.id}); }
+  catch(e){
+    showErr('checks', e.message);
     btn.disabled=false; btn.innerHTML=label; return;
   }
   btn.disabled = false; btn.innerHTML = label;
@@ -904,11 +925,9 @@ document.getElementById('run-compare').onclick = async ()=>{
     fields:document.getElementById('cmp-fields').value.trim(),
     tolerance:document.getElementById('cmp-tol').value.trim()};
   let r;
-  try {
-    r = await (await fetch('/api/compare',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  } catch(e){
-    showErr('compare','Request failed. Is the local node running?');
+  try { r = await postJSON('/api/compare', body); }
+  catch(e){
+    showErr('compare', e.message);
     btn.disabled=false; btn.innerHTML=COMPARE_LABEL; setReadoutState('compare','Error'); return;
   }
   btn.disabled = false; btn.innerHTML = COMPARE_LABEL;
@@ -998,11 +1017,9 @@ document.getElementById('plan-decisions').onclick = async ()=>{
   const body = {out:document.getElementById('dec-out').value.trim(),
                 policy:state.decisions.policy.id};
   let r;
-  try {
-    r = await (await fetch('/api/decisions/plan',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  } catch(e){
-    showErr('decide','Request failed. Is the local node running?');
+  try { r = await postJSON('/api/decisions/plan', body); }
+  catch(e){
+    showErr('decide', e.message);
     btn.disabled=false; btn.innerHTML=PLAN_LABEL; setReadoutState('decide','Error'); return;
   }
   btn.disabled=false; btn.innerHTML=PLAN_LABEL; refresh();
@@ -1030,11 +1047,9 @@ document.getElementById('results-decide').addEventListener('click', async (e)=>{
   const body = {out:document.getElementById('dec-out').value.trim(),
                 findingId:fid, action:act, actor, actionId, reason};
   let r;
-  try {
-    r = await (await fetch('/api/decisions/decide',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
-  } catch(err){
-    showErr('decide','Request failed. Is the local node running?'); btn.disabled=false; return;
+  try { r = await postJSON('/api/decisions/decide', body); }
+  catch(err){
+    showErr('decide', err.message); btn.disabled=false; return;
   }
   if(!r.ok){ showErr('decide', r.error); btn.disabled=false; return; }
   showErr('decide','');

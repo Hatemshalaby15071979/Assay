@@ -94,6 +94,10 @@ def _load_sheet(path: Path, key_col: str | None = None,
         header = [str(c) if c is not None else "" for c in first]
         rows: list[dict] = []
         for r in it:
+            # Skip fully-empty rows (common in exports with a bloated used
+            # range) so they neither count toward the cap nor reach the checks.
+            if not any(c is not None and str(c).strip() for c in r):
+                continue
             rows.append({header[i]: (r[i] if i < len(r) else "")
                          for i in range(len(header))})
             if max_rows and len(rows) > max_rows:

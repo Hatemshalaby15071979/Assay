@@ -107,6 +107,24 @@ def test_row_cap_default_allows_small_sheets(tmp_path):
     assert len(rows) == 5
 
 
+def test_xlsx_blank_rows_are_skipped(tmp_path):
+    from openpyxl import Workbook
+
+    p = tmp_path / "s.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["id", "v"])
+    ws.append(["1", "a"])
+    ws.append([None, None])          # a blank row inside the used range
+    ws.append(["2", "b"])
+    ws.cell(row=50, column=1).value = "   "  # whitespace-only, bloats the range
+    wb.save(p)
+
+    rows, _, is_xlsx = _load_sheet(p)
+    assert is_xlsx is True
+    assert [r["id"] for r in rows] == ["1", "2"]  # blanks dropped, not counted
+
+
 def test_run_with_tight_row_cap_aborts(tmp_path):
     args = argparse.Namespace(
         sheet=str(REPO / "examples" / "example-sheet.xlsx"),

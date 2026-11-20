@@ -123,13 +123,13 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
         sheet_id = body.get("sheet") or ""
         tmpl_id = body.get("template") or ""
         out = SPOOL / sheet_id / "out"
-        args = type("A", (), {})()
-        args.sheet = str(_spool_file(sheet_id))
-        args.template = str(_spool_file(tmpl_id))
-        args.out = str(out)
         try:
+            args = type("A", (), {})()
+            args.sheet = str(_spool_file(sheet_id))
+            args.template = str(_spool_file(tmpl_id))
+            args.out = str(out)
             rc = cmd_run(args)
-        except SignoffError as exc:
+        except Exception as exc:  # noqa: BLE001 - return the real reason as JSON
             return jsonify({"ok": False, "error": str(exc)}), 400
         if rc != 0:
             return jsonify({"ok": False, "error": f"run exited {rc}"}), 400
@@ -151,8 +151,11 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
         tolerance = body.get("tolerance") or ""
         if not key or not fields:
             return jsonify({"ok": False, "error": "key and fields are required"}), 400
-        a_path = _spool_file(a_id)
-        b_path = _spool_file(b_id)
+        try:
+            a_path = _spool_file(a_id)
+            b_path = _spool_file(b_id)
+        except (ValueError, FileNotFoundError, OSError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
         # Distinct output dir per compare, named by the inputs + parameters so
         # two different compares never collide (still deterministic, no random).
         seed = (a_path.name + b_path.name + key + ",".join(fields)
@@ -186,9 +189,9 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
                     "compare-log.jsonl": sha256_bytes(log_text.encode("utf-8")),
                 },
             })
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - return the real reason as JSON
             ledger.append_result(intent, "compare.failed", "gui", {"error": str(exc)})
-            raise
+            return jsonify({"ok": False, "error": str(exc)}), 400
         return jsonify({"ok": True, "summary": result.summary(),
                         "totals": logrec["totals"], "rows": [
                             {"key": r.key, "status": r.status,

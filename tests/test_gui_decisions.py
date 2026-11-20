@@ -132,6 +132,18 @@ def test_deny_then_alternative_then_apply(client, tmp_path):
                for e in r["events"])
 
 
+def test_compare_returns_a_json_error_for_an_unloadable_sheet(client, tmp_path):
+    good = _upload(client, REPO / "examples" / "compare-baseline.xlsx")
+    bad = tmp_path / "notes.txt"
+    bad.write_text("not a sheet", encoding="utf-8")
+    bad_id = _upload(client, bad)
+    r = client.post("/api/compare", json={"sheetA": good, "sheetB": bad_id,
+                                          "key": "item_id", "fields": "amount"})
+    assert r.status_code == 400
+    assert r.json["ok"] is False
+    assert "unsupported" in r.json["error"].lower()
+
+
 def test_pack_export_includes_decision_artifacts(client, tmp_path):
     out, decisions = _board(client, tmp_path)
     r = client.get("/api/pack", query_string={"out": out, "name": "decisions.json"})
