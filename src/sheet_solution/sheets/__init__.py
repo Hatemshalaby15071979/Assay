@@ -10,10 +10,10 @@ named human and recorded in the audit log.
 """
 from sheet_solution.sheets import (
     template, runner, report, images, compare, analyze, compatibility, rules,
-    actions, decisions,
+    actions, decisions, metrics,
 )
 
 __all__ = [
     "template", "runner", "report", "images", "compare",
-    "analyze", "compatibility", "rules", "actions", "decisions",
+    "analyze", "compatibility", "rules", "actions", "decisions", "metrics",
 ]

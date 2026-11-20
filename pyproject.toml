@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sheet-solution"
-version = "0.3.0"
+version = "0.4.0"
 description = "Offline, deterministic, auditable sheet-audit platform: feed it what to look for, it runs the checks and produces a logged, hash-chained report. No network, no model in the check path, PII stays local."
 readme = "README.md"
 requires-python = ">=3.11"

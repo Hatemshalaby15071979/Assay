@@ -143,6 +143,24 @@ applies nothing and reveals an alternative; pick one and use **Use
 alternative**, then **Approve**, then **Apply**. The card's colour and badge
 show the current state, so you can always see what has and has not been done.
 
+## "How much did the tool actually do for me?"
+
+Run:
+
+```
+python -m sheet_solution metrics --out out/report
+```
+
+It reads the pack and prints, in plain numbers: how many checks the machine
+decided on its own (pass or fail) versus how many need a person, and how many
+findings are resolved (applied) versus still outstanding. It is honest by
+design — the tool never claims to "auto-fix" anything, because every failed
+check waits for you.
+
+Very large sheets are refused rather than silently exhausting memory: loading
+stops past 500,000 rows by default. Raise it with `--max-rows N` (or `0` for no
+limit) if you know the sheet fits.
+
 ## "I have two sheets that should match — what changed?"
 
 That's the **compare** task. Instead of filling a check-template, you tell

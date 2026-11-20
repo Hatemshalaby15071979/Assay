@@ -69,16 +69,17 @@ REQUIRED = [
     "src/sheet_solution/sheets/rules/registry.py",
     "src/sheet_solution/sheets/analyze.py",
     "src/sheet_solution/sheets/compatibility.py",
-    # decision loop (fail-closed propose -> decide -> apply)
+    # decision loop (fail-closed propose -> decide -> apply) + ops metrics
     "src/sheet_solution/sheets/actions.py",
     "src/sheet_solution/sheets/decisions.py",
+    "src/sheet_solution/sheets/metrics.py",
     # tests
     "tests/conftest.py", "tests/test_scaffold.py", "tests/test_sheets.py",
     "tests/test_compare.py", "tests/test_gui.py", "tests/test_ledger.py",
     "tests/test_parity.py", "tests/test_policy.py", "tests/test_rules.py",
     "tests/test_analyze.py", "tests/test_decisions.py",
-    "tests/test_gui_decisions.py", "tests/gui-browser-test.sh",
-    "tests/gui-decisions-test.sh",
+    "tests/test_gui_decisions.py", "tests/test_metrics.py",
+    "tests/gui-browser-test.sh", "tests/gui-decisions-test.sh",
     # docs
     "docs/ARCHITECTURE.md", "docs/USER-GUIDE.md",
     # examples

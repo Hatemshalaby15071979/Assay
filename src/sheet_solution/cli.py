@@ -8,6 +8,7 @@ One command surface, fully offline, deterministic:
     python -m sheet_solution decisions    plan --out DIR --policy PATH
     python -m sheet_solution decisions    decide --out DIR --finding-id ID \\
                                           --action approve|decline|re-propose|apply --actor NAME
+    python -m sheet_solution metrics      --out DIR
     python -m sheet_solution verify        --out DIR
 
 `run` is the headline command: load the daily sheet, apply the user's
@@ -57,11 +58,24 @@ def _detect_key_column(header: list[str]) -> str:
     return header[0] if header and header[0].strip() else "row"
 
 
-def _load_sheet(path: Path, key_col: str | None = None) -> tuple[list[dict], str, bool]:
+DEFAULT_MAX_ROWS = 500_000
+
+
+def _cap_error(path: Path, max_rows: int) -> SignoffError:
+    return SignoffError(
+        f"{path.name}: more than {max_rows} data rows (row cap). "
+        "Split the sheet or raise --max-rows (0 disables the cap).")
+
+
+def _load_sheet(path: Path, key_col: str | None = None,
+                max_rows: int = DEFAULT_MAX_ROWS) -> tuple[list[dict], str, bool]:
     """Return (rows, key_col, is_xlsx). Fails closed on unreadable input.
 
     `key_col` lets the caller name the row-identifier column explicitly;
     otherwise it is auto-detected from the header (see _detect_key_column).
+    Rows are streamed and the load aborts once more than ``max_rows`` data rows
+    have been read, so a huge or adversarial sheet cannot exhaust memory
+    (``max_rows=0`` disables the cap).
     """
     ext = path.suffix.lower()
     if ext == ".xlsx":
@@ -73,32 +87,42 @@ def _load_sheet(path: Path, key_col: str | None = None) -> tuple[list[dict], str
                 "pip install 'sheet_solution[xlsx]'") from exc
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
         ws = wb[wb.sheetnames[0]]
-        grid = [list(r) for r in ws.iter_rows(values_only=True)]
-        if not grid:
+        it = ws.iter_rows(values_only=True)
+        first = next(it, None)
+        if first is None:
             raise SignoffError(f"{path.name}: xlsx has no rows")
-        header = [str(c) if c is not None else "" for c in grid[0]]
-        rows = [{header[i]: (r[i] if i < len(r) else "")
-                 for i in range(len(header))}
-                for r in grid[1:]]
+        header = [str(c) if c is not None else "" for c in first]
+        rows: list[dict] = []
+        for r in it:
+            rows.append({header[i]: (r[i] if i < len(r) else "")
+                         for i in range(len(header))})
+            if max_rows and len(rows) > max_rows:
+                raise _cap_error(path, max_rows)
         chosen = key_col or _detect_key_column(header)
         return rows, chosen, True
     if ext == ".csv":
         import csv
         with path.open(encoding="utf-8-sig") as fh:
-            reader = list(csv.reader(fh))
-        if not reader:
-            raise SignoffError(f"{path.name}: empty CSV")
-        header = reader[0]
-        rows = [{header[i]: (r[i] if i < len(r) else "")
-                 for i in range(len(header))}
-                for r in reader[1:] if any(c.strip() for c in r)]
+            reader = csv.reader(fh)
+            header = next(reader, None)
+            if header is None:
+                raise SignoffError(f"{path.name}: empty CSV")
+            rows = []
+            for r in reader:
+                if not any(c.strip() for c in r):
+                    continue
+                rows.append({header[i]: (r[i] if i < len(r) else "")
+                             for i in range(len(header))})
+                if max_rows and len(rows) > max_rows:
+                    raise _cap_error(path, max_rows)
         chosen = key_col or _detect_key_column(header)
         return rows, chosen, False
     raise SignoffError(f"{path.name}: unsupported sheet type (expected .xlsx or .csv)")
 
 
 def cmd_load_sheet(args) -> int:
-    rows, key, is_xlsx = _load_sheet(Path(args.sheet))
+    rows, key, is_xlsx = _load_sheet(
+        Path(args.sheet), max_rows=getattr(args, "max_rows", DEFAULT_MAX_ROWS))
     out = Path(args.json_out) if args.json_out else None
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -140,7 +164,9 @@ def cmd_run(args) -> int:
     })
     try:
         config = template.parse_template(Path(args.template), args.sheet)
-        rows, key, is_xlsx = _load_sheet(Path(args.sheet), getattr(args, "key", None))
+        rows, key, is_xlsx = _load_sheet(
+            Path(args.sheet), getattr(args, "key", None),
+            max_rows=getattr(args, "max_rows", DEFAULT_MAX_ROWS))
         results = runner.run(config, rows, key=key)
 
         artifacts: dict[str, bytes] = {}
@@ -194,8 +220,9 @@ def cmd_compare(args) -> int:
         "tolerance": args.tolerance or "",
     })
     try:
-        a_rows, _, _ = _load_sheet(Path(args.sheet_a))
-        b_rows, _, _ = _load_sheet(Path(args.sheet_b))
+        max_rows = getattr(args, "max_rows", DEFAULT_MAX_ROWS)
+        a_rows, _, _ = _load_sheet(Path(args.sheet_a), max_rows=max_rows)
+        b_rows, _, _ = _load_sheet(Path(args.sheet_b), max_rows=max_rows)
         fields = [f.strip() for f in args.fields.split(",") if f.strip()]
         if not fields:
             raise SignoffError("compare: at least one field to compare is required "
@@ -241,7 +268,8 @@ def cmd_analyze(args) -> int:
     ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
     intent = ledger.append_intent("analyze", "cli", {"sheet": Path(args.sheet).name})
     try:
-        rows, key, _ = _load_sheet(Path(args.sheet))
+        rows, key, _ = _load_sheet(
+            Path(args.sheet), max_rows=getattr(args, "max_rows", DEFAULT_MAX_ROWS))
         result = an_mod.analyze(rows)
         analysis_csv = result.csv().encode("utf-8")
         log_text = (json.dumps({
@@ -281,8 +309,9 @@ def cmd_compatibility(args) -> int:
         "policy": policy_name,
     })
     try:
-        a_rows, _, _ = _load_sheet(Path(args.sheet_a))
-        b_rows, _, _ = _load_sheet(Path(args.sheet_b))
+        max_rows = getattr(args, "max_rows", DEFAULT_MAX_ROWS)
+        a_rows, _, _ = _load_sheet(Path(args.sheet_a), max_rows=max_rows)
+        b_rows, _, _ = _load_sheet(Path(args.sheet_b), max_rows=max_rows)
         required: tuple[str, ...] = ()
         allowed: dict = {}
         if args.policy:
@@ -449,6 +478,36 @@ def cmd_decisions(args) -> int:
     return 0
 
 
+def cmd_metrics(args) -> int:
+    """Deterministic ops metrics from a run pack's results + decisions."""
+    import csv
+
+    from sheet_solution.sheets import metrics as met
+
+    out_dir = Path(args.out)
+    results_path = out_dir / "check-results.csv"
+    if not results_path.exists():
+        raise SignoffError(f"missing {results_path}; run 'run' first")
+    with results_path.open(encoding="utf-8-sig", newline="") as fh:
+        results = list(csv.DictReader(fh))
+    decisions_path = out_dir / "decisions.json"
+    decisions = (json.loads(decisions_path.read_text(encoding="utf-8"))
+                 if decisions_path.exists() else [])
+
+    ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+    intent = ledger.append_intent("metrics", "cli", {"pack": out_dir.name})
+    metrics = met.build_metrics(results, decisions)
+    data = (json.dumps(metrics.to_dict(), indent=2, sort_keys=True) + "\n").encode("utf-8")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "metrics.json").write_bytes(data)
+    ledger.append_result(intent, "metrics.completed", "cli", {
+        "artifacts": {"metrics.json": sha256_bytes(data)},
+    })
+    print(metrics.summary())
+    print(f"metrics -> {out_dir / 'metrics.json'}")
+    return 0
+
+
 def cmd_verify(args) -> int:
     out_dir = Path(args.out)
     results_csv = out_dir / "check-results.csv"
@@ -516,6 +575,8 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("load-sheet", help="load a sheet into row records")
     p.add_argument("--sheet", required=True)
     p.add_argument("--json-out", default=None, help="write rows to JSON")
+    p.add_argument("--max-rows", type=int, default=DEFAULT_MAX_ROWS,
+                   help="fail closed past this many data rows (0 = no cap)")
     p.set_defaults(func=cmd_load_sheet)
 
     p = sub.add_parser("parse-template", help="validate + echo the check template")
@@ -535,6 +596,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--key", default=None,
                    help="column that identifies each row (auto-detected if omitted)")
+    p.add_argument("--max-rows", type=int, default=DEFAULT_MAX_ROWS,
+                   help="fail closed past this many data rows (0 = no cap)")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("compare", help="compare two sheets row-by-row on a key")
@@ -545,11 +608,15 @@ def main(argv: list[str] | None = None) -> int:
                    help="comma-separated columns to compare, e.g. 'name,amount'")
     p.add_argument("--tolerance", default="",
                    help="numeric tolerance for compared fields (blank = exact)")
+    p.add_argument("--max-rows", type=int, default=DEFAULT_MAX_ROWS,
+                   help="fail closed past this many data rows (0 = no cap)")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_compare)
 
     p = sub.add_parser("analyze", help="profile one sheet (types, blanks, ranges)")
     p.add_argument("--sheet", required=True)
+    p.add_argument("--max-rows", type=int, default=DEFAULT_MAX_ROWS,
+                   help="fail closed past this many data rows (0 = no cap)")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_analyze)
 
@@ -559,6 +626,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--policy", default="",
                    help="optional policy file/sheet declaring required columns + domains")
     p.add_argument("--sheet-name", default="", help="worksheet name for an .xlsx policy sheet")
+    p.add_argument("--max-rows", type=int, default=DEFAULT_MAX_ROWS,
+                   help="fail closed past this many data rows (0 = no cap)")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_compatibility)
 
@@ -579,6 +648,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--actor", default="", help="named human actor (required for decide)")
     p.add_argument("--reason", default="", help="optional reason for a decline")
     p.set_defaults(func=cmd_decisions)
+
+    p = sub.add_parser("metrics", help="ops metrics: machine-decided vs human-needed")
+    p.add_argument("--out", required=True, help="run pack directory")
+    p.set_defaults(func=cmd_metrics)
 
     p = sub.add_parser("verify", help="re-check a produced report pack structure")
     p.add_argument("--out", required=True)

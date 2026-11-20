@@ -144,6 +144,9 @@ API tests in `test_gui_decisions.py`.
 
 ## Versioning
 
+- 0.4.0 — sheet-ops release: versioned policy (one schema, three inputs),
+  named rules registry, `analyze` / `compatibility`, fail-closed decision loop
+  (CLI + GUI), ops `metrics`, and a bounded-memory row cap. Staged preview.
 - 0.3.0 — doc-consistency gate, security CI, durable run ledger, scale smoke
   and CLI/GUI parity test.
 - 0.1.0 — initial released version. Spine from Signoff 0.1.0 (MIT).

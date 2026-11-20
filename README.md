@@ -13,7 +13,7 @@ the machine it runs on.
 
 ## Status
 
-**Sheet Solution 0.3.0** — a pre-release candidate, offline by construction.
+**Sheet Solution 0.4.0** — a pre-release candidate, offline by construction.
 This README is the single source of truth for project status; the dated
 release record, finding register and owner sign-off live in
 [`RELEASE_READINESS.md`](RELEASE_READINESS.md).
@@ -123,6 +123,14 @@ operations tasks people actually repeat:
   never carries that runtime evidence. The same loop is in the GUI's **Decide**
   tab — drop a policy, plan proposals, then deny / choose an alternative /
   approve / apply on visual cards.
+- **Measure it honestly.** `metrics` reports, from a run pack, how many checks
+  the machine decided vs how many need a person, and how many findings are
+  resolved vs outstanding — no "auto-resolve" claim.
+  ```
+  python -m sheet_solution metrics --out out/run
+  ```
+  Large sheets are bounded: loading fails closed past `--max-rows`
+  (default 500,000; `0` disables) instead of exhausting memory.
 - **Analyze** a sheet: types, blanks, distinct counts, numeric/date ranges.
   ```
   python -m sheet_solution analyze --sheet examples/example-sheet.xlsx --out out/analyze

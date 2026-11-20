@@ -3,7 +3,12 @@
 All notable changes to Sheet Solution are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased] — towards a sheet-ops solution
+## [0.4.0] — 2026-11-20
+
+The sheet-ops release: policies, a named rules registry, analyze and
+compatibility tasks, a fail-closed decision loop in CLI and GUI, plus ops
+metrics and a bounded-memory sheet loader. Staged preview; see
+`RELEASE_READINESS.md`.
 
 ### Added
 - **Versioned policy, one schema, three inputs** (`core/policy/`): a plain
@@ -47,6 +52,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
   `/api/decisions/decide` reuse the CLI engine, so GUI and CLI are identical.
   A browser E2E drives deny → alternatives → approve → apply with zero page
   errors; pack export now includes `decisions.json` and the corrected copy.
+- **Ops `metrics` command** (`sheets/metrics.py`): an honest, deterministic
+  summary of a run pack — checks the machine decided vs checks needing a person,
+  and findings resolved vs outstanding. There is no "auto-resolve" claim:
+  every failed check still waits for a named human. Writes `metrics.json` and a
+  ledger entry.
+
+### Changed
+- **Bounded-memory sheet loading**: `_load_sheet` now streams rows and fails
+  closed past a row cap (default 500,000; `--max-rows N`, `0` disables) so a
+  huge or adversarial sheet cannot exhaust memory. Applied to `run`,
+  `compare`, `analyze`, `compatibility` and `load-sheet`, and the GUI loader.
 
 ## [0.3.0] — 2026-11-20
 
