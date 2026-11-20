@@ -2,7 +2,8 @@
 
 A single-page local app. The user drags in:
   - one sheet + one check-template  ->  "Run checks"  (the audit persona), or
-  - two sheets + a key + fields     ->  "Compare"     (the two-sheet case).
+  - two sheets + a key + fields     ->  "Compare"     (the two-sheet case), or
+  - a run pack + a policy           ->  "Decide"      (the fail-closed loop).
 
 Results render as **visual cards**: one card per check (or per diff row),
 color-coded — green PASS / red FAIL / amber PENDING-HUMAN, and for compare,
@@ -195,13 +196,83 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
                              "a_value": r.a_value, "b_value": r.b_value}
                             for r in result.rows], "out": str(out)})
 
+    # --- decision loop (fail closed; reuses the CLI engine) --------------
+    @app.post("/api/decisions/plan")
+    def decisions_plan():
+        """Turn a run pack's failures into proposals, using an uploaded policy."""
+        from sheet_solution.cli import cmd_decisions
+
+        body = request.get_json(force=True)
+        try:
+            out = _spool_pack(body.get("out", ""))
+            policy_path = _spool_file(body.get("policy") or "")
+        except (ValueError, FileNotFoundError, OSError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        args = type("A", (), {})()
+        args.decision_action = "plan"
+        args.out = str(out)
+        args.policy = str(policy_path)
+        args.sheet_name = ""; args.check_results = ""; args.finding_id = ""
+        args.action = ""; args.action_id = ""; args.actor = ""; args.reason = ""
+        try:
+            cmd_decisions(args)
+        except Exception as exc:  # noqa: BLE001 - surface any fail-closed abort
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        return jsonify({"ok": True, "out": str(out),
+                        "decisions": _read_decisions(out)})
+
+    @app.get("/api/decisions")
+    def decisions_list():
+        """Current decision states + their ledger evidence for a pack."""
+        from sheet_solution.sheets.ledger import Ledger
+
+        try:
+            out = _spool_pack(request.args.get("out", ""))
+        except (ValueError, OSError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        ledger = Ledger(out / ".audit" / "ledger.jsonl")
+        return jsonify({"ok": True, "out": str(out),
+                        "decisions": _read_decisions(out),
+                        "events": ledger.decision_events()})
+
+    @app.post("/api/decisions/decide")
+    def decisions_decide():
+        """Record approve/decline/re-propose/apply with a named human actor."""
+        from sheet_solution.cli import cmd_decisions
+        from sheet_solution.sheets.ledger import Ledger
+
+        body = request.get_json(force=True)
+        try:
+            out = _spool_pack(body.get("out", ""))
+        except (ValueError, OSError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        args = type("A", (), {})()
+        args.decision_action = "decide"
+        args.out = str(out)
+        args.policy = ""; args.sheet_name = ""; args.check_results = ""
+        args.finding_id = body.get("findingId") or ""
+        args.action = body.get("action") or ""
+        args.action_id = body.get("actionId") or ""
+        args.actor = body.get("actor") or ""
+        args.reason = body.get("reason") or ""
+        try:
+            cmd_decisions(args)
+        except Exception as exc:  # noqa: BLE001 - fail-closed abort -> 400
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        ledger = Ledger(out / ".audit" / "ledger.jsonl")
+        return jsonify({"ok": True, "out": str(out),
+                        "decisions": _read_decisions(out),
+                        "events": ledger.decision_events()})
+
     @app.get("/api/pack")
     def download_pack():
         out = Path(request.args.get("out", "")).resolve()
         files = {"csv": out / "check-results.csv",
                  "ccsv": out / "compare-report.csv",
                  "log": out / "audit-log.jsonl",
-                 "clog": out / "compare-log.jsonl"}
+                 "clog": out / "compare-log.jsonl",
+                 "dec": out / "decisions.json",
+                 "corr": out / "corrected-copy.jsonl"}
         name = request.args.get("name", "")
         target = next((p for k, p in files.items() if p.name == name), None)
         if target is None:
@@ -231,12 +302,42 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
 
 
 def _spool_file(upload_id: str) -> Path:
-    """Each upload spool dir holds exactly one file; return its full path."""
+    """Each upload spool dir holds exactly one file; return its full path.
+
+    The id must be a single spool directory name (uploads are named by their
+    SHA-256 hex digest). Anything with a separator, a traversal component or a
+    symlink escaping the spool is refused, so a crafted id cannot read files
+    outside the local spool.
+    """
+    if not isinstance(upload_id, str) or not upload_id:
+        raise ValueError("invalid upload id")
+    if upload_id in (".", "..") or Path(upload_id).name != upload_id:
+        raise ValueError("invalid upload id")
     d = SPOOL / upload_id
+    if not d.is_dir():
+        raise FileNotFoundError(f"spool {upload_id} has no file")
+    if d.resolve().parent != SPOOL.resolve():
+        raise ValueError("invalid upload id")
     for p in sorted(d.iterdir()):
         if p.is_file():
             return p
     raise FileNotFoundError(f"spool {upload_id} has no file")
+
+
+def _spool_pack(out: str) -> Path:
+    """Resolve a run pack path, refusing anything outside the local spool."""
+    p = Path(out).resolve()
+    spool = SPOOL.resolve()
+    if spool not in p.parents and p != spool:
+        raise ValueError("pack must be a local GUI spool path")
+    return p
+
+
+def _read_decisions(out: Path) -> list[dict]:
+    path = out / "decisions.json"
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _read_results_csv(path: Path) -> list[dict]:

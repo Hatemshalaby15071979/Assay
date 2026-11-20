@@ -40,6 +40,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
   hash-chained ledger; `list` shows current states. Applying an approved action
   emits a `corrected-copy.jsonl`. Actor and note stay in the ledger, never in
   the deterministic projection.
+- **GUI decision console**: a third "Decide" tab runs the whole loop in the
+  browser — drop a policy, plan proposals, then act on colour-coded decision
+  cards (deny, choose an alternative, approve, apply). Offline endpoints
+  `/api/decisions` (list + ledger evidence), `/api/decisions/plan` and
+  `/api/decisions/decide` reuse the CLI engine, so GUI and CLI are identical.
+  A browser E2E drives deny → alternatives → approve → apply with zero page
+  errors; pack export now includes `decisions.json` and the corrected copy.
 
 ## [0.3.0] — 2026-11-20
 

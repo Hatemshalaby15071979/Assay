@@ -131,6 +131,12 @@ jobs:
           CHROME: /usr/bin/google-chrome
           PORT: "8600"
 
+      - name: Run the GUI decision-loop E2E (deny -> alternatives -> apply)
+        run: bash tests/gui-decisions-test.sh
+        env:
+          CHROME: /usr/bin/google-chrome
+          PORT: "8601"
+
   package:
     name: Package (wheel + clean install + SBOM)
     needs: test

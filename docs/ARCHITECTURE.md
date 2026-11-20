@@ -122,6 +122,15 @@ using the policy's `on_fail.actions` or the safe fallback when a check declares
 none. The `decisions` CLI command (`plan` / `list` / `decide`) exposes the whole
 loop; applying an approved action writes `corrected-copy.jsonl`.
 
+The GUI's third "Decide" tab is a thin client over the same engine:
+`/api/decisions/plan` (build proposals from a pack + uploaded policy),
+`/api/decisions` (list states + ledger evidence) and `/api/decisions/decide`
+(record a transition) call `cmd_decisions` directly, so CLI and GUI cannot
+drift. Pack paths are confined to the local content-named spool. A browser E2E
+(`tests/gui-decisions-test.sh`) drives deny → alternatives → approve → apply
+through real DOM drops and asserts zero page errors, complementing the Flask
+API tests in `test_gui_decisions.py`.
+
 ## Data flow
 
 1. **Input:** sheet (.xlsx/.csv) + plain-English check-template.

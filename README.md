@@ -120,7 +120,9 @@ operations tasks people actually repeat:
   Approving is not applying: only `decide --action apply` executes the named
   action and writes `corrected-copy.jsonl`. Every transition is recorded in the
   hash-chained ledger with the human actor; the deterministic `decisions.json`
-  never carries that runtime evidence.
+  never carries that runtime evidence. The same loop is in the GUI's **Decide**
+  tab — drop a policy, plan proposals, then deny / choose an alternative /
+  approve / apply on visual cards.
 - **Analyze** a sheet: types, blanks, distinct counts, numeric/date ranges.
   ```
   python -m sheet_solution analyze --sheet examples/example-sheet.xlsx --out out/analyze

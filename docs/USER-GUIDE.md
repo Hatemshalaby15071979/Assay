@@ -136,6 +136,13 @@ approval before doing anything. Only `apply` writes a corrected copy
 (`corrected-copy.jsonl`), and only for a decision you approved. Every step is
 recorded in the ledger with who did it, so you can prove what was decided.
 
+**In the GUI:** open the **Decide** tab. Drop your policy file, confirm the run
+pack path (it fills in after you run checks in tab 01), type your name, and
+click **Plan decisions**. Each finding becomes a colour-coded card. **Decline**
+applies nothing and reveals an alternative; pick one and use **Use
+alternative**, then **Approve**, then **Apply**. The card's colour and badge
+show the current state, so you can always see what has and has not been done.
+
 ## "I have two sheets that should match — what changed?"
 
 That's the **compare** task. Instead of filling a check-template, you tell

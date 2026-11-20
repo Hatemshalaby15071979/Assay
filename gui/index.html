@@ -89,7 +89,7 @@
   .clock-meta .meta-val{color:var(--muted)}
 
   /* ---------- mode switch ---------- */
-  .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:0 0 1.1rem}
+  .mode-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin:0 0 1.1rem}
   .mode{
     position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.85rem;
     padding:.9rem 1rem;text-align:left;cursor:pointer;color:var(--ink);
@@ -99,6 +99,7 @@
     animation:rise .45s ease both;animation-delay:.05s;
   }
   .mode:nth-child(2){animation-delay:.1s}
+  .mode:nth-child(3){animation-delay:.2s}
   .mode:hover{border-color:var(--line);background:linear-gradient(180deg, rgba(16,29,39,.85), rgba(8,14,20,.85))}
   .mode.active{border-color:var(--phos);box-shadow:var(--glow);background:linear-gradient(180deg, rgba(16,36,30,.85), rgba(7,15,13,.85))}
   .mode.active::before{content:"";position:absolute;left:-1px;top:8px;bottom:8px;width:2px;background:var(--phos);box-shadow:0 0 12px var(--phos)}
@@ -262,6 +263,41 @@
     font-size:10.5px;line-height:1.45;color:var(--amber);background:rgba(255,179,71,.07);
     border:1px solid rgba(255,179,71,.24);border-radius:var(--radius)}
   .human-note .icon{font-size:13px;margin-top:.1rem}
+
+  /* ---------- decision cards ---------- */
+  #pane-decide .fields{grid-template-columns:1.7fr 1fr}
+  .card.proposed .card-rail{background:var(--amber);box-shadow:0 0 12px rgba(255,179,71,.4)}
+  .card.declined .card-rail{background:var(--red);box-shadow:0 0 12px rgba(255,77,109,.4)}
+  .card.approved .card-rail{background:var(--cyan);box-shadow:0 0 12px rgba(92,225,255,.4)}
+  .card.applied .card-rail{background:var(--phos);box-shadow:0 0 12px rgba(124,255,178,.5)}
+  .b-proposed{background:var(--amber);color:#1c1100}
+  .b-declined{background:var(--red);color:#1c0308}
+  .b-approved{background:var(--cyan);color:#04161c}
+  .b-applied{background:var(--phos);color:#04120a}
+  .chip[data-tone="proposed"]{border-left-color:var(--amber)} .chip[data-tone="proposed"] b{color:var(--amber)}
+  .chip[data-tone="declined"]{border-left-color:var(--red)} .chip[data-tone="declined"] b{color:var(--red)}
+  .chip[data-tone="approved"]{border-left-color:var(--cyan)} .chip[data-tone="approved"] b{color:var(--cyan)}
+  .chip[data-tone="applied"]{border-left-color:var(--phos)} .chip[data-tone="applied"] b{color:var(--phos)}
+  .decision-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-top:.55rem}
+  .decision-actions button{padding:.4rem .6rem;font:700 10px/1 var(--font-mono);letter-spacing:.06em;
+    text-transform:uppercase;cursor:pointer;border-radius:var(--radius)}
+  .decision-actions .act-go{background:var(--phos);color:#04120a;border:1px solid var(--phos)}
+  .decision-actions .act-go:hover:not(:disabled){background:transparent;color:var(--phos);box-shadow:var(--glow)}
+  .decision-actions .act-ghost{background:transparent;color:var(--muted);border:1px solid var(--line-dim)}
+  .decision-actions .act-ghost:hover:not(:disabled){color:var(--red);border-color:var(--red)}
+  .decision-actions button:disabled{opacity:.5;cursor:not-allowed}
+  .decision-actions .alt-select,.decision-actions .reason{
+    padding:.4rem .5rem;background:rgba(4,7,10,.9);color:var(--ink);font:11px var(--font-mono);
+    border:1px solid var(--line-dim);border-radius:var(--radius);max-width:100%}
+  .decision-actions .alt-select:focus-visible,.decision-actions .reason:focus-visible{
+    outline:none;border-color:var(--phos);box-shadow:0 0 0 1px var(--phos)}
+  .decision-actions .reason{flex:1 1 140px;min-width:120px}
+  .decision-actions .reason::placeholder{color:#4f625b}
+  .opt-row{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.4rem}
+  .opt-row span{font-size:9.5px;letter-spacing:.04em;padding:.12rem .35rem;border-radius:var(--radius);
+    color:var(--muted);background:rgba(160,190,180,.06);border:1px solid var(--line-dim)}
+  .decision-actions .applied-tag{font-size:10px;letter-spacing:.08em;color:var(--phos)}
+
   .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.35rem}
   .diff-side{min-width:0;padding:.4rem .5rem;background:rgba(4,7,10,.85);border:1px solid var(--line-dim);border-radius:var(--radius)}
   .diff-side code{display:block;margin-top:.2rem;font:11px/1.45 var(--font-mono);color:var(--ink);
@@ -326,6 +362,7 @@
     .mode-switch{grid-template-columns:1fr}
     .mode-sub{white-space:normal}
     .fields{grid-template-columns:1fr}
+    #pane-decide .fields{grid-template-columns:1fr}
     .summary{grid-template-columns:repeat(2,1fr)}
     .meta.optional{display:none}
     .cards{grid-template-columns:1fr}
@@ -355,6 +392,7 @@
   <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M16 4h3a1 1 0 0 1 1 1v3"/><path d="M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M4 12h16"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></symbol>
   <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-decide" viewBox="0 0 24 24"><path d="M5 4v7a4 4 0 0 0 4 4h9"/><path d="M14 11l4 4-4 4"/><path d="M5 4h.01"/></symbol>
 </svg>
 
 <div class="shell">
@@ -392,6 +430,14 @@
           <span class="mode-sub">two sheets → matched / changed / only-in</span>
         </span>
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-compare"/></svg>
+      </button>
+      <button id="tab-decide" class="mode" role="tab" aria-selected="false" aria-controls="pane-decide">
+        <span class="mode-index">03</span>
+        <span class="mode-body">
+          <span class="mode-title">Decide</span>
+          <span class="mode-sub">findings → propose / deny / apply</span>
+        </span>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg>
       </button>
     </div>
 
@@ -526,6 +572,62 @@
         </div>
       </div>
     </section>
+
+    <!-- ============ DECIDE ============ -->
+    <section id="pane-decide" class="hidden" role="tabpanel" aria-labelledby="tab-decide">
+      <div class="console-grid">
+        <div class="bay">
+          <div class="bay-head"><span class="micro">Decision bay</span><span class="micro">Steps 01–03</span></div>
+
+          <div class="drop" data-for="policy" id="drop-policy">
+            <div class="drop-top">
+              <div class="drop-id"><span class="drop-index">01</span><span class="drop-label">Policy</span></div>
+              <span class="drop-state" id="state-policy" data-state="empty">Empty</span>
+            </div>
+            <div class="drop-slot">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>
+              <div class="hint">Drop a policy (JSON / YAML / CSV / XLSX), or <button type="button" class="pick" data-for="policy">choose a file</button>.</div>
+            </div>
+            <div class="name" aria-live="polite"></div>
+            <div class="preview"></div>
+          </div>
+
+          <div class="fields">
+            <label for="dec-out">Run pack
+              <input id="dec-out" placeholder="auto-filled from your last run" autocomplete="off" spellcheck="false">
+            </label>
+            <label for="dec-actor">Your name (actor)
+              <input id="dec-actor" placeholder="e.g. alice" autocomplete="off" spellcheck="false">
+            </label>
+          </div>
+          <p class="micro">Run checks first (tab 01) — the pack path fills in automatically. Every approve, deny and apply is recorded with your name.</p>
+
+          <div class="actions">
+            <button class="go" id="plan-decisions" disabled>
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg><span>Plan decisions</span><kbd>↵</kbd>
+            </button>
+            <button class="ghost" id="reset-decide">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-reset"/></svg>Start over
+            </button>
+          </div>
+          <div class="err" id="err-decide" role="alert"></div>
+          <div class="notice" id="notice-decide" role="status"></div>
+        </div>
+
+        <div class="readout">
+          <div class="readout-head">
+            <span class="micro">Readout</span>
+            <span class="micro" id="decide-readout-state" data-state="idle">Idle</span>
+          </div>
+          <div class="empty" id="empty-decide">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg>
+            <p class="empty-title">Awaiting input</p>
+            <p class="micro">Drop a policy, confirm the run pack, then plan the decisions.</p>
+          </div>
+          <div id="results-decide"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="foot">
@@ -540,14 +642,15 @@
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 
 <script>
-const state = {checks:{sheet:null,template:null},compare:{A:null,B:null}};
-const dropOf = {sheet:'drop-sheet',template:'drop-template',sheetA:'drop-A',sheetB:'drop-B'};
-const bucketOf = {sheet:'checks',template:'checks',sheetA:'compare',sheetB:'compare'};
-const storeKey = {sheet:'sheet',template:'template',sheetA:'A',sheetB:'B'};
-const stateOf = {sheet:'state-sheet',template:'state-template',sheetA:'state-sheetA',sheetB:'state-sheetB'};
+const state = {checks:{sheet:null,template:null},compare:{A:null,B:null},decisions:{policy:null,out:'',actor:''}};
+const dropOf = {sheet:'drop-sheet',template:'drop-template',sheetA:'drop-A',sheetB:'drop-B',policy:'drop-policy'};
+const bucketOf = {sheet:'checks',template:'checks',sheetA:'compare',sheetB:'compare',policy:'decisions'};
+const storeKey = {sheet:'sheet',template:'template',sheetA:'A',sheetB:'B',policy:'policy'};
+const stateOf = {sheet:'state-sheet',template:'state-template',sheetA:'state-sheetA',sheetB:'state-sheetB',policy:'state-policy'};
 
 const RUN_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-play"/></svg><span>Run checks</span><kbd>↵</kbd>';
 const COMPARE_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-compare"/></svg><span>Compare</span><kbd>↵</kbd>';
+const PLAN_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg><span>Plan decisions</span><kbd>↵</kbd>';
 
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
@@ -572,13 +675,16 @@ document.addEventListener('click', e=>{
   const btn = e.target.closest('.pick');
   if(!btn) return;
   pendingKey = btn.dataset.for;
-  fileInput.accept = pendingKey==='template' ? '.txt,.md' : '.xlsx,.csv';
+  fileInput.accept = pendingKey==='template' ? '.txt,.md'
+    : pendingKey==='policy' ? '.json,.yaml,.yml,.csv,.xlsx' : '.xlsx,.csv';
   fileInput.click();
 });
 
 function storeUpload(key, r){
   const bucket = bucketOf[key];
-  if (bucket==='checks') state.checks[storeKey[key]]=r; else state.compare[storeKey[key]]=r;
+  if (bucket==='checks') state.checks[storeKey[key]]=r;
+  else if (bucket==='decisions') state.decisions[storeKey[key]]=r;
+  else state.compare[storeKey[key]]=r;
   const el = document.getElementById(dropOf[key]);
   const nameEl = el.querySelector('.name');
   nameEl.innerHTML = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>' + esc(r.name) + '</span>';
@@ -652,21 +758,25 @@ function refresh(){
     !(state.compare.A && state.compare.B &&
       document.getElementById('cmp-key').value.trim() &&
       document.getElementById('cmp-fields').value.trim());
+  document.getElementById('plan-decisions').disabled =
+    !(state.decisions.policy && document.getElementById('dec-out').value.trim());
 }
 document.getElementById('cmp-key').addEventListener('input',refresh);
 document.getElementById('cmp-fields').addEventListener('input',refresh);
 document.getElementById('cmp-tol').addEventListener('input',refresh);
+document.getElementById('dec-out').addEventListener('input',refresh);
+document.getElementById('dec-actor').addEventListener('input',refresh);
 
 document.getElementById('tab-checks').onclick=()=>switchPane('checks');
 document.getElementById('tab-compare').onclick=()=>switchPane('compare');
+document.getElementById('tab-decide').onclick=()=>switchPane('decide');
 function switchPane(p){
-  document.getElementById('pane-checks').classList.toggle('hidden',p!=='checks');
-  document.getElementById('pane-compare').classList.toggle('hidden',p!=='compare');
-  const tc=document.getElementById('tab-checks'), tp=document.getElementById('tab-compare');
-  tc.classList.toggle('active',p==='checks');
-  tp.classList.toggle('active',p==='compare');
-  tc.setAttribute('aria-selected', String(p==='checks'));
-  tp.setAttribute('aria-selected', String(p==='compare'));
+  ['checks','compare','decide'].forEach(name=>{
+    document.getElementById('pane-'+name).classList.toggle('hidden',p!==name);
+    const tab=document.getElementById('tab-'+name);
+    tab.classList.toggle('active',p===name);
+    tab.setAttribute('aria-selected', String(p===name));
+  });
 }
 
 /* ---- run checks ---- */
@@ -688,6 +798,9 @@ document.getElementById('run-checks').onclick = async ()=>{
   }
   btn.disabled = false; btn.innerHTML = RUN_LABEL;
   if(!r.ok){ showErr('checks', r.error); setReadoutState('checks','Error'); return; }
+  state.decisions.out = r.out||'';
+  document.getElementById('dec-out').value = state.decisions.out;
+  refresh();
   renderChecks(r);
 };
 
@@ -874,6 +987,143 @@ function cardForDiff(x, i){
     </article>`;
 }
 
+/* ---- decide (fail-closed loop) ---- */
+document.getElementById('plan-decisions').onclick = async ()=>{
+  showErr('decide',''); showNotice('decide','');
+  const btn = document.getElementById('plan-decisions');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Planning';
+  setReadoutState('decide','Running');
+  liveStatus('Building proposals.');
+  const body = {out:document.getElementById('dec-out').value.trim(),
+                policy:state.decisions.policy.id};
+  let r;
+  try {
+    r = await (await fetch('/api/decisions/plan',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  } catch(e){
+    showErr('decide','Request failed. Is the local node running?');
+    btn.disabled=false; btn.innerHTML=PLAN_LABEL; setReadoutState('decide','Error'); return;
+  }
+  btn.disabled=false; btn.innerHTML=PLAN_LABEL; refresh();
+  if(!r.ok){ showErr('decide', r.error); setReadoutState('decide','Error'); return; }
+  renderDecisions(r);
+};
+
+// One delegated handler for every decision card action.
+document.getElementById('results-decide').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const fid = btn.dataset.fid, act = btn.dataset.act;
+  const actor = document.getElementById('dec-actor').value.trim();
+  if(!actor){ showErr('decide','Enter your name as the actor before deciding.'); return; }
+  let actionId = '', reason = '';
+  if(act==='re-propose'){
+    const sel = document.getElementById('alt-'+fid);
+    actionId = sel ? sel.value : '';
+  }
+  if(act==='decline'){
+    const inp = document.getElementById('reason-'+fid);
+    reason = inp ? inp.value.trim() : '';
+  }
+  btn.disabled = true;
+  const body = {out:document.getElementById('dec-out').value.trim(),
+                findingId:fid, action:act, actor, actionId, reason};
+  let r;
+  try {
+    r = await (await fetch('/api/decisions/decide',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  } catch(err){
+    showErr('decide','Request failed. Is the local node running?'); btn.disabled=false; return;
+  }
+  if(!r.ok){ showErr('decide', r.error); btn.disabled=false; return; }
+  showErr('decide','');
+  renderDecisions(r);
+  liveStatus(`Recorded ${act} for ${fid} by ${actor}.`);
+});
+
+document.getElementById('reset-decide').onclick = ()=>{
+  state.decisions = {policy:null,out:'',actor:''};
+  const el = document.getElementById(dropOf.policy);
+  const n = el.querySelector('.name'); n.innerHTML=''; n.classList.remove('show');
+  const p = el.querySelector('.preview'); if(p) p.innerHTML='';
+  setDropState('policy',false);
+  document.getElementById('dec-out').value='';
+  document.getElementById('dec-actor').value='';
+  document.getElementById('results-decide').innerHTML = '';
+  document.getElementById('empty-decide').classList.remove('hidden');
+  setReadoutState('decide','Idle');
+  showErr('decide',''); showNotice('decide','');
+  liveStatus('Decisions reset.');
+  refresh();
+};
+
+function alternativesOf(d){
+  const opts = d.options||[];
+  if(d.state!=='DECLINED') return opts;
+  const rest = opts.filter(o=>o!==d.proposed_action);
+  return rest.length ? rest : ['flag_for_human'];
+}
+
+function renderDecisions(r){
+  const ds = r.decisions||[];
+  const counts = {proposed:0,declined:0,approved:0,applied:0};
+  ds.forEach(d=>{ const k=String(d.state||'').toLowerCase(); if(k in counts) counts[k]++; });
+  const summary = `<div class="summary">
+      <div class="chip" data-tone="proposed"><b>${counts.proposed}</b><span>Proposed</span></div>
+      <div class="chip" data-tone="declined"><b>${counts.declined}</b><span>Declined</span></div>
+      <div class="chip" data-tone="approved"><b>${counts.approved}</b><span>Approved</span></div>
+      <div class="chip" data-tone="applied"><b>${counts.applied}</b><span>Applied</span></div>
+    </div>
+    <div class="verdict"><span class="led" aria-hidden="true"></span><span>Decision board</span>
+      <span class="micro">nothing applies until you approve, then apply</span></div>`;
+  document.getElementById('results-decide').innerHTML = summary +
+    `<div class="cards">${ds.map((d,i)=>cardForDecision(d,i)).join('')}</div>` +
+    dlBlock(r.out,'decide');
+  document.getElementById('empty-decide').classList.add('hidden');
+  setReadoutState('decide','Done');
+  liveStatus(`Decision board: ${ds.length} finding(s).`);
+}
+
+function cardForDecision(d, i){
+  const st = String(d.state||'').toLowerCase();
+  const fid = esc(d.decision_id);
+  const f = d.finding||{};
+  const opts = (d.options||[]).map(o=>`<span>${esc(o)}</span>`).join('');
+  let controls = '';
+  if(d.state==='PROPOSED'){
+    controls = `<div class="decision-actions">
+      <input class="reason" id="reason-${fid}" placeholder="reason (optional)" aria-label="Reason for declining ${fid}">
+      <button type="button" class="act-ghost" data-act="decline" data-fid="${fid}">Decline</button>
+      <button type="button" class="act-go" data-act="approve" data-fid="${fid}">Approve ${esc(d.proposed_action)}</button>
+    </div>`;
+  } else if(d.state==='DECLINED'){
+    const alts = alternativesOf(d).map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+    controls = `<div class="decision-actions">
+      <label class="sr-only" for="alt-${fid}">Alternative action</label>
+      <select class="alt-select" id="alt-${fid}">${alts}</select>
+      <button type="button" class="act-go" data-act="re-propose" data-fid="${fid}">Use alternative</button>
+    </div>`;
+  } else if(d.state==='APPROVED'){
+    controls = `<div class="decision-actions">
+      <button type="button" class="act-go" data-act="apply" data-fid="${fid}">Apply ${esc(d.proposed_action)}</button>
+    </div>`;
+  } else if(d.state==='APPLIED'){
+    controls = `<div class="decision-actions"><span class="applied-tag">Applied ${esc(d.applied_action||d.proposed_action)}</span></div>`;
+  }
+  return `<article class="card ${st}" data-fid="${fid}" data-state="${esc(d.state)}" style="--i:${i}">
+      <span class="card-rail" aria-hidden="true"></span>
+      <div class="card-body">
+        <div class="card-top"><span class="micro">FINDING</span>
+          <span class="badge b-${st}">${esc(d.state)}</span></div>
+        <h3 class="card-title">${esc(f.check_id||'check')} · row ${esc(f.row_id||'—')}</h3>
+        <p class="card-detail">${esc(f.detail||'A failed check needs a decision.')}</p>
+        <div class="opt-row"><span>proposed: ${esc(d.proposed_action)}</span>${opts}</div>
+        ${controls}
+      </div>
+    </article>`;
+}
+
 function mediaBlock(media,out){
   if(!media||!media.length) return '';
   const figs = media.map(n=>`<figure>
@@ -891,6 +1141,9 @@ function dlBlock(out,mode='checks'){
   if(mode==='checks'){
     links.push([`/api/pack?out=${enc}&name=check-results.csv`,'Report.csv']);
     links.push([`/api/pack?out=${enc}&name=audit-log.jsonl`,'Audit.log']);
+  } else if(mode==='decide'){
+    links.push([`/api/pack?out=${enc}&name=decisions.json`,'Decisions.json']);
+    links.push([`/api/pack?out=${enc}&name=corrected-copy.jsonl`,'Corrected.jsonl']);
   } else {
     links.push([`/api/pack?out=${enc}&name=compare-report.csv`,'Compare.csv']);
     links.push([`/api/pack?out=${enc}&name=compare-log.jsonl`,'Compare.log']);

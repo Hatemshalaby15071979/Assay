@@ -77,6 +77,8 @@ REQUIRED = [
     "tests/test_compare.py", "tests/test_gui.py", "tests/test_ledger.py",
     "tests/test_parity.py", "tests/test_policy.py", "tests/test_rules.py",
     "tests/test_analyze.py", "tests/test_decisions.py",
+    "tests/test_gui_decisions.py", "tests/gui-browser-test.sh",
+    "tests/gui-decisions-test.sh",
     # docs
     "docs/ARCHITECTURE.md", "docs/USER-GUIDE.md",
     # examples
