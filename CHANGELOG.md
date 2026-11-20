@@ -1,3 +1,73 @@
+# Changelog
+
+All notable changes to Sheet Solution are recorded here.
+Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [Unreleased] — towards a sheet-ops solution
+
+### Added
+- **Versioned policy, one schema, three inputs** (`core/policy/`): a plain
+  policy answers "what may the machine decide, and what must a person
+  confirm?". JSON files, a restricted-YAML subset (no unpinned dependency),
+  and a two-column key/value policy sheet (`.csv`/`.xlsx`) all normalise to
+  one validated `Policy`. Unknown fields, rules, actions, duplicate ids and
+  ambiguous YAML are refused (fail closed). New `parse-policy` command echoes
+  what the machine understood. Examples: `examples/policy.example.*`.
+- **Named rules registry** (`sheets/rules/`): deterministic rules with stable
+  ids (`not_blank`, `is_blank`, `equals`, `numeric_range`, `one_of`, `regex`,
+  `date_before`, `cross_column`, `lookup_in`, `unique`). The four legacy
+  plain-English predicates now run through this registry, byte-identically.
+  The registry and the policy schema share one rule-id vocabulary and refuse
+  to load if they ever disagree.
+- **`analyze` command**: profiles one sheet (per-column type inference, blank
+  and distinct counts, numeric/date min-max) into a deterministic CSV + JSON
+  pack with a ledger entry.
+- **`compatibility` command**: a first-class ops task distinct from row-level
+  compare — checks required columns, cross-sheet type agreement and policy
+  value domains, returning a defensible COMPATIBLE / INCOMPATIBLE verdict.
+  Exit status 1 means INCOMPATIBLE.
+- **Fail-closed decision loop** (`sheets/decisions.py`, `sheets/actions.py`):
+  findings become `PROPOSED` decisions and can only reach `APPLIED` through a
+  recorded human confirmation (`approve`), never by a machine guess. A denial
+  (`decline`) applies nothing and always leaves the remaining declared options
+  plus a `flag_for_human` fallback; a human may `re-propose` an alternative,
+  which still needs approval. `APPLIED` is terminal. Every transition requires
+  a named actor. Named action executors are a fixed registry (no code from a
+  policy is ever executed) and share one id vocabulary with the schema.
+- **`decisions` command**: `plan` turns a run's `check-results.csv` + policy
+  into deterministic `decisions.json` proposals; `decide` records
+  approve/decline/re-propose/apply with the whole lifecycle written to the
+  hash-chained ledger; `list` shows current states. Applying an approved action
+  emits a `corrected-copy.jsonl`. Actor and note stay in the ledger, never in
+  the deterministic projection.
+
+## [0.3.0] — 2026-11-20
+
+### Added
+- **Doc-consistency gate** (`scripts/check-doc-consistency.py`): version,
+  Python floor and status claims are checked against `pyproject.toml` and
+  `README.md`; live docs may not hardcode a drifting test count or claim a
+  digital signature.
+- **Security CI job**: Bandit, `pip-audit`, a pattern secret scan and a
+  fail-closed full-history secret scanner (`tooling/security/`).
+- **Durable run/compare ledger** (`sheets/ledger.py`): an intent is written
+  before work starts and a result after, so an interrupted run leaves a
+  recoverable pending intent; the ledger is hash-chained and locally
+  anchorable. New `ledger` CLI command (`verify`, `pending`, `tail`,
+  `anchor`, `check-anchor`).
+- **Release readiness record** (`RELEASE_READINESS.md`) separating the CI
+  verification gate from the release decision.
+- **Scale smoke** (`scripts/scale-stress.py`) and **CLI/GUI parity test**
+  (`tests/test_parity.py`).
+- CI: Python 3.11/3.12/3.13 matrix, clean-venv wheel install + CLI smoke,
+  SBOM, and an aggregated release-gate job.
+
+### Fixed
+- `CHANGELOG.md` now starts with its `# Changelog` title (the 0.2.1 block
+  had been inserted above it).
+- Removed hardcoded test-count claims from live docs; the count had drifted
+  from the actual suite.
+
 ## [0.2.1] — 2026-11-18
 
 ### Fixed
@@ -6,11 +76,6 @@
   token '}'`), so no file was ever uploaded and every button stayed
   inactive — the GUI was effectively a static design. Restored the loop;
   verified by a real-browser DOM-drag-and-drop regression test (now in CI).
-
-# Changelog
-
-All notable changes to Sheet Solution are recorded here.
-Format follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [0.2.0] — 2026-11-18
 
@@ -59,7 +124,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
   plain-English check-template; it runs the checks and writes a report pack
   (CSV + audit log + extracted images) with a hash chain you can re-verify.
 - Reused spine from Signoff 0.1.0 (model / util / engine / render / verify /
-  ingest / mapping) under `src/sheet_solution/core/` — 151 inherited tests
+  ingest / mapping) under `src/sheet_solution/core/` — the inherited tests
   pass unchanged against the copied engine (see `PROVENANCE.md`).
 - New sheet layer (`src/sheet_solution/sheets/`): template parser,
   deterministic check runner, report renderer, embedded-image extraction.

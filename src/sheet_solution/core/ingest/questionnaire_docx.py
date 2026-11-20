@@ -1,14 +1,15 @@
-"""Questionnaire DOCX parser — stdlib zipfile + xml.etree.ElementTree ONLY.
+"""Questionnaire DOCX parser — stdlib zipfile + defusedxml.ElementTree.
 
 No python-docx dependency. Safety limits protect against hostile DOCX files
 (zip bombs, nested-path probes): a total decompressed-size cap, a member
-count cap, and the mandatory `word/document.xml` member.
+count cap, and the mandatory `word/document.xml` member. defusedxml blocks
+DTD/entity expansion in the document XML.
 """
 from __future__ import annotations
 
 import re
 import zipfile
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 from pathlib import Path
 
 from sheet_solution.core.errors import ParseError

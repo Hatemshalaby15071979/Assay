@@ -10,7 +10,7 @@ spine and which parts are **new**, so the lineage is honest and auditable.
 - **Reference repo:** `cloned_repos/signoff` (Signoff 0.1.0, MIT licence).
 - **Reuse mode:** a *copy* of the deterministic spine, rebranded and
   re-homed under `src/sheet_solution/core/`. The copy is **read-only with
-  respect to behaviour**: every inherited test in `tests/` (the 151-test
+  respect to behaviour**: every inherited test in `tests/` (the
   signoff-derived suite) still passes against the copied engine unchanged,
   which is the proof the reuse was faithful.
 - The `signoff/` repository is **never modified**. All Sheet Solution work
@@ -33,8 +33,8 @@ spine and which parts are **new**, so the lineage is honest and auditable.
 | `scripts/check-determinism.py` | `scripts/check-determinism.py` | module name re-rooted |
 | `tests/test_*.py` (spine suite) | `tests/test_*.py` | rebranded to the new package |
 
-**Inherited guarantees that survive the copy (verified by the 151-test
-suite):** offline (zero network), deterministic (byte-identical output),
+**Inherited guarantees that survive the copy (verified by the inherited
+test suite):** offline (zero network), deterministic (byte-identical output),
 fail-closed on every input, hash-chained evidence packs, CSV formula-
 injection neutralisation, atomic writes, non-root Docker.
 
@@ -46,6 +46,7 @@ injection neutralisation, atomic writes, non-root Docker.
 | `src/sheet_solution/sheets/runner.py` | Deterministic check runner (machine rules + human routing) |
 | `src/sheet_solution/sheets/report.py` | check-results CSV + summary; formula-neutralised |
 | `src/sheet_solution/sheets/images.py` | Embedded-image extraction (xlsx), local-only |
+| `src/sheet_solution/sheets/ledger.py` | Durable intent/result audit ledger (new, offline) |
 | `src/sheet_solution/cli.py` | Top-level CLI: sheet commands + re-exported spine commands |
 | `tests/test_sheets.py` | New-engine tests (template / runner / report / images) |
 | `tests/test_scaffold.py` | Rewritten for the shipped-tool tree |
@@ -62,6 +63,12 @@ log. This keeps PII local and the output auditable, on any hardware.
 
 ## Verification
 
-- 151 inherited spine tests + 15 new sheet-layer tests, all green.
-- `scripts/check-offline.py`: 50 files scanned, zero network imports/calls.
+- The inherited spine suite and the new sheet-layer tests are all green
+  (`make test`).
+- `scripts/check-offline.py`: scans the runtime tree, zero network
+  imports/calls.
+- `scripts/check-doc-consistency.py`: version, Python floor and status claims
+  agree across live docs.
+- `tooling/security/scan_history_secrets.py`: fail-closed scan over every
+  reachable commit.
 - `signoff/` repository untouched.

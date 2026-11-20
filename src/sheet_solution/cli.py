@@ -5,6 +5,9 @@ One command surface, fully offline, deterministic:
     python -m sheet_solution load-sheet    --sheet PATH [--key-col NAME] [--json OUT]
     python -m sheet_solution parse-template --template PATH [--sheet PATH]
     python -m sheet_solution run          --sheet PATH --template PATH --out DIR [--as-of ISO]
+    python -m sheet_solution decisions    plan --out DIR --policy PATH
+    python -m sheet_solution decisions    decide --out DIR --finding-id ID \\
+                                          --action approve|decline|re-propose|apply --actor NAME
     python -m sheet_solution verify        --out DIR
 
 `run` is the headline command: load the daily sheet, apply the user's
@@ -21,7 +24,9 @@ from pathlib import Path
 
 from sheet_solution import __version__
 from sheet_solution.core.errors import SignoffError
+from sheet_solution.core.engine.hash_chain import sha256_bytes
 from sheet_solution.sheets import template, runner, report, images
+from sheet_solution.sheets.ledger import Ledger, verify_ledger
 
 # Re-export the inherited spine CLI surface so the signoff test suite
 # (tests/conftest.py) resolves cli._render_artifacts / cli._write_atomic /
@@ -114,33 +119,62 @@ def cmd_parse_template(args) -> int:
     return 0
 
 
+def cmd_parse_policy(args) -> int:
+    """Load a policy file/sheet into one validated schema and echo it back."""
+    from sheet_solution.core.policy import load_policy, validate_policy
+
+    path = Path(args.policy)
+    raw = load_policy(path, sheet=getattr(args, "sheet_name", "") or "")
+    policy = validate_policy(raw)
+    print(policy.echo())
+    print(f"\nvalidated: {path.name}")
+    return 0
+
+
 def cmd_run(args) -> int:
-    config = template.parse_template(Path(args.template), args.sheet)
-    rows, key, is_xlsx = _load_sheet(Path(args.sheet), getattr(args, "key", None))
-    results = runner.run(config, rows, key=key)
-
     out_dir = Path(args.out)
-    artifacts: dict[str, bytes] = {}
-    artifacts["check-results.csv"] = report.render_results_csv(results).encode("utf-8")
+    ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+    intent = ledger.append_intent("run", "cli", {
+        "sheet": Path(args.sheet).name,
+        "template": Path(args.template).name,
+    })
+    try:
+        config = template.parse_template(Path(args.template), args.sheet)
+        rows, key, is_xlsx = _load_sheet(Path(args.sheet), getattr(args, "key", None))
+        results = runner.run(config, rows, key=key)
 
-    # Audit log: structured, machine-readable, with full traceability.
-    log_lines = [json.dumps({
-        "sheet": args.sheet, "persona": config.persona,
-        "row_key": key, "rows_loaded": len(rows), "results": [
-            {"check_id": r.check_id, "outcome": r.outcome,
-             "matched": r.matched_rows, "failed": r.failed_rows,
-             "denominator": r.denominator, "detail": r.detail}
-            for r in results]})]
-    artifacts["audit-log.jsonl"] = ("\n".join(log_lines) + "\n").encode("utf-8")
+        artifacts: dict[str, bytes] = {}
+        artifacts["check-results.csv"] = report.render_results_csv(results).encode("utf-8")
 
-    # Extract embedded images for any human-review checks (xlsx only).
-    extracted = []
-    if is_xlsx:
-        extracted = images.extract_images(Path(args.sheet), out_dir)
-        for ex in extracted:
-            print(f"extracted image {ex.out_path} ({ex.bytes} bytes)")
+        # Audit log: structured, machine-readable, with full traceability.
+        log_lines = [json.dumps({
+            "sheet": args.sheet, "persona": config.persona,
+            "row_key": key, "rows_loaded": len(rows), "results": [
+                {"check_id": r.check_id, "outcome": r.outcome,
+                 "matched": r.matched_rows, "failed": r.failed_rows,
+                 "denominator": r.denominator, "detail": r.detail}
+                for r in results]})]
+        artifacts["audit-log.jsonl"] = ("\n".join(log_lines) + "\n").encode("utf-8")
 
-    _write_atomic(out_dir, artifacts)
+        # Extract embedded images for any human-review checks (xlsx only).
+        extracted = []
+        if is_xlsx:
+            extracted = images.extract_images(Path(args.sheet), out_dir)
+            for ex in extracted:
+                print(f"extracted image {ex.out_path} ({ex.bytes} bytes)")
+
+        _write_atomic(out_dir, artifacts)
+        ledger.append_result(intent, "run.completed", "cli", {
+            "persona": config.persona,
+            "checks": len(results),
+            "artifacts": {
+                name: sha256_bytes(data) for name, data in sorted(artifacts.items())
+            },
+            "images": [Path(ex.out_path).name for ex in extracted],
+        })
+    except Exception as exc:
+        ledger.append_result(intent, "run.failed", "cli", {"error": str(exc)})
+        raise
     print(report.summary(results))
     print(f"report pack -> {args.out}")
     return 0
@@ -150,32 +184,268 @@ def cmd_compare(args) -> int:
     """Compare two sheets row-by-row on a key; emit a diff report pack."""
     from sheet_solution.sheets import compare as cmp_mod
 
-    a_rows, _, _ = _load_sheet(Path(args.sheet_a))
-    b_rows, _, _ = _load_sheet(Path(args.sheet_b))
-    fields = [f.strip() for f in args.fields.split(",") if f.strip()]
-    if not fields:
-        raise SignoffError("compare: at least one field to compare is required "
-                           "(comma-separated, e.g. 'name,amount')")
-
-    result = cmp_mod.compare(a_rows, b_rows, args.key, fields,
-                             tolerance=args.tolerance or "")
-
     out_dir = Path(args.out)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "compare-report.csv").write_text(result.csv(), encoding="utf-8")
-    log = {
-        "kind": "compare",
-        "sheet_a": args.sheet_a, "sheet_b": args.sheet_b,
-        "key": args.key, "fields": fields, "tolerance": args.tolerance or "",
-        "totals": {"a": result.total_a, "b": result.total_b,
-                   "matched": result.matched, "changed": result.changed,
-                   "only_a": result.only_a, "only_b": result.only_b},
-    }
-    (out_dir / "compare-log.jsonl").write_text(
-        json.dumps(log, sort_keys=True) + "\n", encoding="utf-8")
+    ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+    intent = ledger.append_intent("compare", "cli", {
+        "sheet_a": Path(args.sheet_a).name,
+        "sheet_b": Path(args.sheet_b).name,
+        "key": args.key,
+        "fields": args.fields,
+        "tolerance": args.tolerance or "",
+    })
+    try:
+        a_rows, _, _ = _load_sheet(Path(args.sheet_a))
+        b_rows, _, _ = _load_sheet(Path(args.sheet_b))
+        fields = [f.strip() for f in args.fields.split(",") if f.strip()]
+        if not fields:
+            raise SignoffError("compare: at least one field to compare is required "
+                               "(comma-separated, e.g. 'name,amount')")
+
+        result = cmp_mod.compare(a_rows, b_rows, args.key, fields,
+                                 tolerance=args.tolerance or "")
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        report_text = result.csv()
+        log = {
+            "kind": "compare",
+            "sheet_a": args.sheet_a, "sheet_b": args.sheet_b,
+            "key": args.key, "fields": fields, "tolerance": args.tolerance or "",
+            "totals": {"a": result.total_a, "b": result.total_b,
+                       "matched": result.matched, "changed": result.changed,
+                       "only_a": result.only_a, "only_b": result.only_b},
+        }
+        log_text = json.dumps(log, sort_keys=True) + "\n"
+        (out_dir / "compare-report.csv").write_text(report_text, encoding="utf-8")
+        (out_dir / "compare-log.jsonl").write_text(log_text, encoding="utf-8")
+        ledger.append_result(intent, "compare.completed", "cli", {
+            "totals": log["totals"],
+            "artifacts": {
+                "compare-report.csv": sha256_bytes(report_text.encode("utf-8")),
+                "compare-log.jsonl": sha256_bytes(log_text.encode("utf-8")),
+            },
+        })
+    except Exception as exc:
+        ledger.append_result(intent, "compare.failed", "cli", {"error": str(exc)})
+        raise
 
     print(result.summary())
     print(f"compare report -> {args.out}/compare-report.csv")
+    return 0
+
+
+def cmd_analyze(args) -> int:
+    """Profile one sheet into a deterministic analysis pack (CSV + JSON log)."""
+    from sheet_solution.sheets import analyze as an_mod
+
+    out_dir = Path(args.out)
+    ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+    intent = ledger.append_intent("analyze", "cli", {"sheet": Path(args.sheet).name})
+    try:
+        rows, key, _ = _load_sheet(Path(args.sheet))
+        result = an_mod.analyze(rows)
+        analysis_csv = result.csv().encode("utf-8")
+        log_text = (json.dumps({
+            "kind": "analyze", "sheet": args.sheet, "row_key": key,
+            "row_count": result.row_count, "column_count": result.column_count,
+            "columns": [c.__dict__ for c in result.columns],
+        }, sort_keys=True) + "\n").encode("utf-8")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "analysis.csv").write_bytes(analysis_csv)
+        (out_dir / "analysis-log.jsonl").write_bytes(log_text)
+        ledger.append_result(intent, "analyze.completed", "cli", {
+            "row_count": result.row_count, "column_count": result.column_count,
+            "artifacts": {
+                "analysis.csv": sha256_bytes(analysis_csv),
+                "analysis-log.jsonl": sha256_bytes(log_text),
+            },
+        })
+    except Exception as exc:
+        ledger.append_result(intent, "analyze.failed", "cli", {"error": str(exc)})
+        raise
+    print(result.summary())
+    print(f"analysis pack -> {args.out}")
+    return 0
+
+
+def cmd_compatibility(args) -> int:
+    """Compare two sheets' schema + value domains against a policy."""
+    from sheet_solution.sheets import compatibility as compat_mod
+    from sheet_solution.core.policy import load_policy, validate_policy
+
+    out_dir = Path(args.out)
+    ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+    policy_name = Path(args.policy).name if args.policy else ""
+    intent = ledger.append_intent("compatibility", "cli", {
+        "sheet_a": Path(args.sheet_a).name,
+        "sheet_b": Path(args.sheet_b).name,
+        "policy": policy_name,
+    })
+    try:
+        a_rows, _, _ = _load_sheet(Path(args.sheet_a))
+        b_rows, _, _ = _load_sheet(Path(args.sheet_b))
+        required: tuple[str, ...] = ()
+        allowed: dict = {}
+        if args.policy:
+            policy = validate_policy(
+                load_policy(Path(args.policy), sheet=args.sheet_name or ""))
+            required = policy.compatibility.required_columns
+            allowed = dict(policy.compatibility.allowed_values)
+        result = compat_mod.compatibility(a_rows, b_rows, required, allowed)
+        report_text = result.csv().encode("utf-8")
+        log_text = (json.dumps({
+            "kind": "compatibility",
+            "sheet_a": args.sheet_a, "sheet_b": args.sheet_b, "policy": policy_name,
+            "verdict": result.verdict,
+            "findings": [f.__dict__ for f in result.findings],
+        }, sort_keys=True) + "\n").encode("utf-8")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "compatibility-report.csv").write_bytes(report_text)
+        (out_dir / "compatibility-log.jsonl").write_bytes(log_text)
+        ledger.append_result(intent, "compatibility.completed", "cli", {
+            "verdict": result.verdict,
+            "findings": len(result.findings),
+            "artifacts": {
+                "compatibility-report.csv": sha256_bytes(report_text),
+                "compatibility-log.jsonl": sha256_bytes(log_text),
+            },
+        })
+    except Exception as exc:
+        ledger.append_result(intent, "compatibility.failed", "cli", {"error": str(exc)})
+        raise
+    print(result.summary())
+    print(f"compatibility report -> {args.out}")
+    return 0 if result.verdict == "COMPATIBLE" else 1
+
+
+def _decisions_path(out_dir: Path) -> Path:
+    return out_dir / "decisions.json"
+
+
+def _load_decisions(out_dir: Path) -> list:
+    from sheet_solution.sheets import decisions as dec
+
+    path = _decisions_path(out_dir)
+    if not path.exists():
+        raise SignoffError(f"no decisions.json in {out_dir}; run 'decisions plan' first")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return [dec.decision_from_dict(d) for d in data]
+
+
+def _save_decisions(out_dir: Path, decs: list) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _decisions_path(out_dir).write_text(
+        json.dumps([d.to_dict() for d in decs], indent=2, sort_keys=True) + "\n",
+        encoding="utf-8")
+
+
+def cmd_decisions(args) -> int:
+    """Fail-closed decision loop: plan findings, then record human decisions."""
+    import csv
+
+    from sheet_solution.sheets import actions as act, decisions as dec
+
+    out_dir = Path(args.out)
+    op = args.decision_action
+
+    if op == "plan":
+        from sheet_solution.core.policy import load_policy, validate_policy
+
+        results_path = (Path(args.check_results) if args.check_results
+                        else out_dir / "check-results.csv")
+        if not results_path.exists():
+            raise SignoffError(f"missing check results: {results_path}")
+        with results_path.open(encoding="utf-8-sig", newline="") as fh:
+            results = list(csv.DictReader(fh))
+        checks = {}
+        if args.policy:
+            policy = validate_policy(
+                load_policy(Path(args.policy), sheet=args.sheet_name or ""))
+            checks = {c.id: c for c in policy.checks}
+        found = dec.build_findings(results, checks)
+        _save_decisions(out_dir, found)
+        ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+        intent = ledger.append_intent("decisions.plan", "system", {
+            "check_results": results_path.name, "policy": Path(args.policy).name if args.policy else "",
+        })
+        for d in found:
+            ledger.append_proposal(d)
+        ledger.append_result(intent, "decisions.plan.completed", "system",
+                             {"proposals": len(found)})
+        print(f"planned {len(found)} finding(s) -> {_decisions_path(out_dir)}")
+        for d in found:
+            print(f"  {d.decision_id} [{d.state}] proposed={d.proposed_action} "
+                  f"options={list(d.options)}")
+        return 0
+
+    decs = _load_decisions(out_dir)
+    ledger = Ledger(out_dir / ".audit" / "ledger.jsonl")
+
+    if op == "list":
+        if not decs:
+            print("no decisions (run 'decisions plan' first)")
+            return 0
+        for d in decs:
+            line = (f"{d.decision_id} [{d.state}] proposed={d.proposed_action} "
+                    f"options={list(d.options)}")
+            if d.applied_action:
+                line += f" applied={d.applied_action}"
+            print(line)
+        return 0
+
+    # op == "decide" — every transition requires a named human actor.
+    if not args.actor.strip():
+        raise SignoffError("a named --actor is required to record a decision")
+    idx = next((i for i, d in enumerate(decs) if d.decision_id == args.finding_id), None)
+    if idx is None:
+        raise SignoffError(f"unknown finding id {args.finding_id!r}")
+    current = decs[idx]
+    actor = args.actor.strip()
+    transition, updated = "", current
+    applied_result = None
+
+    if args.action == "approve":
+        updated = dec.approve(current, actor)
+        transition = "approve"
+    elif args.action == "decline":
+        updated = dec.decline(current, actor, args.reason or "")
+        transition = "decline"
+    elif args.action == "re-propose":
+        if not args.action_id:
+            raise SignoffError("re-propose requires --action-id")
+        updated = dec.re_propose(current, actor, args.action_id)
+        transition = "re_propose"
+    elif args.action == "apply":
+        if not dec.apply_ok(current):
+            raise SignoffError(
+                f"{current.decision_id} is {current.state}, not APPROVED; refusing to apply")
+        row = {"row_id": current.finding.row_id,
+               current.finding.column: current.finding.value}
+        result = act.apply_action(current.proposed_action, row)
+        updated = dec.mark_applied(current, actor)
+        transition = "apply"
+        applied_result = result
+        with (out_dir / "corrected-copy.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({
+                "decision_id": updated.decision_id, "action": result.action,
+                "row": result.row, "drop": result.drop, "note": result.note,
+            }, sort_keys=True) + "\n")
+    else:
+        raise SignoffError("decide requires --action "
+                           "[approve|decline|re-propose|apply]")
+
+    decs[idx] = updated
+    _save_decisions(out_dir, decs)
+    ledger.append_decision(updated, actor, transition)
+    if transition == "apply":
+        ledger.append_application(updated, actor, applied_result)
+        print(f"{updated.decision_id}: APPLIED {applied_result.action} by {actor} "
+              f"-> {applied_result.note}")
+    elif transition == "decline":
+        print(f"{updated.decision_id}: DECLINED by {actor}; "
+              f"alternatives={list(updated.alternatives())}")
+    else:
+        print(f"{updated.decision_id}: {updated.state} by {actor} "
+              f"(proposed={updated.proposed_action})")
     return 0
 
 
@@ -186,10 +456,52 @@ def cmd_verify(args) -> int:
     if not results_csv.exists() or not log.exists():
         print("NOT-FOUND: missing check-results.csv or audit-log.jsonl", file=sys.stderr)
         return 1
+    ledger_path = out_dir / ".audit" / "ledger.jsonl"
+    if ledger_path.exists():
+        chain = verify_ledger(ledger_path)
+        if not chain["ok"]:
+            print(f"LEDGER-BROKEN: {chain.get('reason')} at seq {chain.get('seq', '?')}",
+                  file=sys.stderr)
+            return 1
+        print(f"LEDGER-VERIFIED: {chain.get('count', 0)} event(s)")
     data = json.loads(log.read_text(encoding="utf-8"))
     print(f"VERIFIED-STRUCTURE: {len(data['results'])} result record(s), "
           f"persona={data['persona']}, rows={data['rows_loaded']}")
     return 0
+
+
+def cmd_ledger(args) -> int:
+    """Inspect or verify the durable intent/result ledger for a run."""
+    path = Path(args.out) / ".audit" / "ledger.jsonl"
+    if args.action == "verify":
+        chain = verify_ledger(path)
+        if chain["ok"]:
+            print(f"LEDGER-VERIFIED: {chain.get('count', 0)} event(s), "
+                  f"head {str(chain.get('head', 'GENESIS'))[:12]}")
+            return 0
+        print(f"LEDGER-BROKEN: {chain.get('reason')} at seq {chain.get('seq', '?')}",
+              file=sys.stderr)
+        return 1
+    ledger = Ledger(path)
+    if args.action == "pending":
+        pending = ledger.pending_intents()
+        if not pending:
+            print("no pending intents")
+        for event in pending:
+            print(json.dumps(event, sort_keys=True))
+        return 0
+    if args.action == "tail":
+        for event in ledger.tail(args.n):
+            print(json.dumps(event, sort_keys=True))
+        return 0
+    if args.action == "anchor":
+        print(json.dumps(ledger.anchor(), sort_keys=True))
+        return 0
+    if args.action == "check-anchor":
+        result = ledger.check_anchor()
+        print(json.dumps(result, sort_keys=True))
+        return 0 if result["ok"] else 1
+    return 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -211,6 +523,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--sheet", default="", help="sheet path recorded in the config")
     p.set_defaults(func=cmd_parse_template)
 
+    p = sub.add_parser("parse-policy", help="validate + echo a policy (file first, sheet second)")
+    p.add_argument("--policy", required=True,
+                   help="policy .json/.yaml/.yml file or .csv/.xlsx policy sheet")
+    p.add_argument("--sheet-name", default="", help="worksheet name for an .xlsx policy sheet")
+    p.set_defaults(func=cmd_parse_policy)
+
     p = sub.add_parser("run", help="run the checks and emit the report pack + audit log")
     p.add_argument("--sheet", required=True)
     p.add_argument("--template", required=True)
@@ -230,9 +548,48 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_compare)
 
+    p = sub.add_parser("analyze", help="profile one sheet (types, blanks, ranges)")
+    p.add_argument("--sheet", required=True)
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_analyze)
+
+    p = sub.add_parser("compatibility", help="check two sheets' schema + value domains")
+    p.add_argument("--sheet-a", required=True)
+    p.add_argument("--sheet-b", required=True)
+    p.add_argument("--policy", default="",
+                   help="optional policy file/sheet declaring required columns + domains")
+    p.add_argument("--sheet-name", default="", help="worksheet name for an .xlsx policy sheet")
+    p.add_argument("--out", required=True)
+    p.set_defaults(func=cmd_compatibility)
+
+    p = sub.add_parser("decisions", help="fail-closed decision loop over proposed findings")
+    p.add_argument("decision_action", choices=["plan", "list", "decide"],
+                   help="plan: build findings; list: show states; decide: record a human decision")
+    p.add_argument("--out", required=True,
+                   help="run pack directory (holds check-results.csv / decisions.json)")
+    p.add_argument("--policy", default="",
+                   help="policy file/sheet for plan (declares on_fail actions)")
+    p.add_argument("--sheet-name", default="", help="worksheet name for an .xlsx policy sheet")
+    p.add_argument("--check-results", default="",
+                   help="override path to check-results.csv for plan")
+    p.add_argument("--finding-id", default="", help="decision to act on (for decide)")
+    p.add_argument("--action", default="", choices=["approve", "decline", "re-propose", "apply"],
+                   help="human decision to record (for decide)")
+    p.add_argument("--action-id", default="", help="alternative action id for re-propose")
+    p.add_argument("--actor", default="", help="named human actor (required for decide)")
+    p.add_argument("--reason", default="", help="optional reason for a decline")
+    p.set_defaults(func=cmd_decisions)
+
     p = sub.add_parser("verify", help="re-check a produced report pack structure")
     p.add_argument("--out", required=True)
     p.set_defaults(func=cmd_verify)
+
+    p = sub.add_parser("ledger", help="inspect the durable run/compare ledger")
+    p.add_argument("--out", required=True)
+    p.add_argument("action",
+                   choices=["verify", "pending", "tail", "anchor", "check-anchor"])
+    p.add_argument("--n", type=int, default=20, help="events to show for 'tail'")
+    p.set_defaults(func=cmd_ledger)
 
     # --- inherited spine subcommands (reused engine: mapping, questionnaire,
     #     build, demo, verify-pack). These are the signoff-derived commands

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "line_exceptions": [],
+  "value_exceptions": [],
+  "email_domains": {
+    "example.com": "RFC 2606 reserved example domain",
+    "example.net": "RFC 2606 reserved example domain",
+    "example.org": "RFC 2606 reserved example domain",
+    "example.test": "RFC 2606 reserved example domain",
+    "localhost": "synthetic local tenant domain"
+  }
+}

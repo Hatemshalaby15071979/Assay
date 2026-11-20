@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 echo "== run-all-checks: start =="
 python3 scripts/check-scaffold.py
 python3 scripts/check-offline.py
+python3 scripts/check-doc-consistency.py
 
 echo "== demo build (determinism) =="
 python3 scripts/check-determinism.py --out out/determinism

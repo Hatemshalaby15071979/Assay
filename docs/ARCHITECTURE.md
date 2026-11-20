@@ -23,7 +23,8 @@ Two personas, inferred from how you write the checks:
 
 | Layer | Path | Responsibility | New / reused |
 |---|---|---|---|
-| Sheet layer | `sheets/` | template parse, check runner, report, image extract | **new** |
+| Sheet layer | `sheets/` | template parse, check runner, report, image extract, policy rules, decisions/actions | **new** |
+| Policy | `core/policy/` | one validated schema from JSON / safe-YAML / policy sheet | new |
 | CLI | `cli.py` | sheet commands + re-exported spine commands | new |
 | GUI | `gui/` | offline web shell around the CLI | new |
 | Spine | `core/` | model, util, engine (hash chain), render, verify, ingest, mapping | **reused** from Signoff 0.1.0 |
@@ -52,6 +53,74 @@ keeps PII local and the output auditable on any hardware.
 - **Fail closed:** bad template or unreadable sheet aborts, nothing partial.
 - **Hash chain:** SHA-256 over canonical JSON; `verify` replays it.
 - **CSV injection neutralised:** report fields starting with `=` are quoted.
+- **Claims consistent:** `check-doc-consistency.py` checks version, Python
+  floor and status claims against `pyproject.toml` and `README.md`.
+- **Security scanned:** CI runs Bandit, `pip-audit` and a fail-closed
+  full-history secret scan.
+
+## Durable run ledger (new in 0.3.0)
+
+`run` and `compare` write a hash-chained ledger under `<out>/.audit/`:
+
+- an **intent** event before any work starts;
+- a **result** event after the pack is written, linked by sequence and hash;
+- a `pending` view for an intent whose result never arrived (an interrupted
+  process), so a partial run is visible rather than silent;
+- optional local **anchors** (chained receipt files) that detect truncation,
+  rewrite or reorder.
+
+The ledger is a runtime evidence log with wall-clock timestamps; the report
+pack stays byte-identical. Anchoring is local-only — there is no network and
+no external timestamp authority. This is separate from the inherited pack
+hash chain: the pack chain covers the report artifacts, the ledger covers the
+run lifecycle.
+
+```bash
+python -m sheet_solution ledger --out out/report verify
+python -m sheet_solution ledger --out out/report pending
+python -m sheet_solution ledger --out out/report anchor
+```
+
+## The decision loop (fail closed, no audit theater)
+
+The point of the loop is that a finding always leads to something a person can
+*do*, and a refusal never dead-ends. It is a pure state machine in
+`sheets/decisions.py`:
+
+```
+PROPOSED --approve(actor)--> APPROVED --apply(actor)--> APPLIED (terminal)
+    |                          |
+    | decline(actor)           | decline(actor)
+    v                          v
+DECLINED --re-propose(actor, alternative)--> PROPOSED
+```
+
+Fail-closed invariants:
+
+- **No apply without approval.** `apply_ok()` is true only in `APPROVED`;
+  `mark_applied()` refuses any other state. A proposal or a denial can never
+  be applied.
+- **A denial keeps options.** `decline()` applies nothing and `alternatives()`
+  still returns the other declared options; if none remain it returns the
+  `flag_for_human` safe fallback, so there is always a way to act.
+- **A named human is mandatory.** Every transition requires a non-empty
+  actor; illegal transitions raise `DecisionError`. Re-proposing selects a
+  declared alternative (or the safe fallback) and still needs a fresh approval.
+- **Policies name, never execute.** `sheets/actions.py` is a fixed registry of
+  pure row transforms (`tag_row`, `flag_for_human`, `emit_corrected_copy`,
+  `drop_row`, `escalate`); a policy can only name one, never carry code. The
+  action ids are the exact vocabulary in `core/policy/schema.ACTION_NAMES`;
+  the module refuses to load if the two ever disagree (as does the rules
+  registry with `RULE_NAMES`).
+- **Runtime evidence stays out of deterministic artifacts.** Actor and note go
+  to the ledger (`decision.proposed` / `decision.recorded` / `decision.applied`);
+  `decisions.json` is a deterministic projection (ids, finding, options, state)
+  with no clock or human identity.
+
+`build_findings()` maps failed rows from `check-results.csv` to proposals,
+using the policy's `on_fail.actions` or the safe fallback when a check declares
+none. The `decisions` CLI command (`plan` / `list` / `decide`) exposes the whole
+loop; applying an approved action writes `corrected-copy.jsonl`.
 
 ## Data flow
 
@@ -66,6 +135,8 @@ keeps PII local and the output auditable on any hardware.
 
 ## Versioning
 
+- 0.3.0 — doc-consistency gate, security CI, durable run ledger, scale smoke
+  and CLI/GUI parity test.
 - 0.1.0 — initial released version. Spine from Signoff 0.1.0 (MIT).
 
 See [`PROVENANCE.md`](../PROVENANCE.md) for the exact reuse lineage.

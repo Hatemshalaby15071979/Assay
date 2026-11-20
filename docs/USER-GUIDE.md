@@ -89,6 +89,53 @@ python -m sheet_solution verify --out out/report
 If anything in the pack was changed after you ran it, this tells you. A clean
 pack prints `VERIFIED-STRUCTURE`.
 
+The run also writes `out/report/.audit/ledger.jsonl`, an intent/result chain
+for the run itself:
+
+```
+python -m sheet_solution ledger --out out/report verify    # chain intact?
+python -m sheet_solution ledger --out out/report pending   # interrupted runs
+```
+
+A normal run leaves no pending intents. If the tool was stopped mid-run, the
+intent is still there and `pending` shows it — you can see the run did not
+finish instead of trusting a partial report.
+
+## "The check failed — now what do I do about it?"
+
+That's the **decision loop**. The tool never changes your data on its own. It
+turns each failed check into a *proposal* and waits for you. In a policy file
+you decide what options a failure may offer (for example `tag_row` or
+`flag_for_human`); if you name none, the safe "flag it for a person" option is
+always offered.
+
+After a `run`, from the terminal:
+
+```
+# 1. see the proposals (written to decisions.json in the run pack)
+python -m sheet_solution decisions plan --out out/report --policy policy.json
+python -m sheet_solution decisions list --out out/report
+
+# 2. make a decision — every step needs a named person (--actor)
+python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+  --action decline --actor alice --reason "needs a human"
+python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+  --action re-propose --actor bob --action-id flag_for_human
+python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+  --action approve --actor carol
+
+# 3. only now apply it — approving alone changes nothing
+python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+  --action apply --actor carol
+```
+
+The important part: **saying no never hides your options.** If you decline an
+action, the tool applies nothing and shows the remaining options (plus a
+"flag for a person" path). You pick another, and it still waits for an
+approval before doing anything. Only `apply` writes a corrected copy
+(`corrected-copy.jsonl`), and only for a decision you approved. Every step is
+recorded in the ledger with who did it, so you can prove what was decided.
+
 ## "I have two sheets that should match — what changed?"
 
 That's the **compare** task. Instead of filling a check-template, you tell

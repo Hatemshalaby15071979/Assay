@@ -195,7 +195,8 @@ def compute_coverage(
             expected = spec.fixed_expected
             label = spec.denominator_label
         else:
-            assert spec.premise is not None
+            # Internal spec invariant; a programmer error, not user input.
+            assert spec.premise is not None  # nosec B101
             premise = [e for e in in_window if spec.premise(e)]
             matched_events = [e for e in premise if spec.matcher(e)]
             matched = len(matched_events)

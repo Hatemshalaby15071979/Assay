@@ -13,12 +13,18 @@ Sheet Solution is a deterministic, offline tool. Keep it that way.
    No wall clock, no random. `scripts/check-determinism.py` proves it.
 4. **PII stays local.** Nothing leaves the user's machine. Embedded images
    are extracted on-device, never uploaded.
+5. **No silent partial runs.** `run` and `compare` write an intent before
+   work and a result after (`sheets/ledger.py`). Do not bypass the ledger or
+   make a failure look like a completion.
 
 ## Workflow
 
 ```bash
-make all          # scaffold + offline scan + full test suite + spine demo
+make all          # scaffold + offline + doc consistency + tests + spine demo
+make check-docs   # version / Python floor / status claims agree
 make test-cov     # tests with coverage
+make scale        # bounded compare smoke (not a capacity claim)
+make security     # fail-closed full-history secret scan
 ./run.sh examples/example-sheet.xlsx examples/check-template.example.txt out/report
 ```
 

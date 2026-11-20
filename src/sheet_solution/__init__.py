@@ -6,7 +6,7 @@ path. Structured checks are deterministic; image/semantic checks are
 flagged for a named human and recorded in the audit log.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 # Re-export the core config at the package root so `from sheet_solution import
 # config` resolves for the test suite and operators. The real module is

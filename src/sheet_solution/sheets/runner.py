@@ -18,7 +18,8 @@ from sheet_solution.sheets.template import Check, CheckConfig
 from sheet_solution.core.errors import ConfigError
 
 # Outcome labels are the report's vocabulary. Never a third "maybe".
-PASS = "PASS"
+# Outcome label, not a credential (bandit B105 false positive).
+PASS = "PASS"  # nosec B105
 FAIL = "FAIL"
 PENDING_HUMAN = "PENDING-HUMAN"
 UNMAPPED = "UNMAPPED"
@@ -86,42 +87,36 @@ def run_machine_check(check: Check, rows: list[dict], key: str = "row") -> Check
 
 
 def _predicate_for(rule: str, col: str, rows: list[dict]):
-    """Translate the plain-English rule into a deterministic predicate.
+    """Translate the plain-English rule into a named, deterministic predicate.
 
-    Returns (predicate, resolvable). Unresolvable rules return (None, False)
-    so the caller routes them to a human instead of guessing. The table is
-    hand-maintained (provenance: docs/01-DECISION-LOG.md, sheet_solution).
+    The four legacy predicate families now resolve through the rules registry
+    (``sheets.rules``) so the plain-English template and the policy layer share
+    one implementation. Returns (predicate, resolvable); unresolvable rules
+    return (None, False) so the caller routes them to a human, never a guess.
     """
+    from sheet_solution.sheets.rules import registry as _rules
+
     text = rule.strip().lower()
-    value_re = f"\\b{col}\\b" if col else ""
     if text in ("no blank", "cannot be blank", "not blank", "no blanks",
                 "cannot be empty", "not empty"):
-        return (lambda v: v.strip() != ""), True
+        return (lambda v: _rules.apply("not_blank", v)), True
     if text in ("is blank", "is empty", "blank", "empty"):
-        return (lambda v: v.strip() == ""), True
+        return (lambda v: _rules.apply("is_blank", v)), True
     for marker in ("must equal", "equals", "must be"):
         if marker in text:
             expected = text.split(marker, 1)[1].strip()
-            return (lambda v: v.strip().lower() == expected), True
-    # Numeric comparison with optional tolerance.
+            return (lambda v: _rules.apply("equals", v, {"value": expected})), True
+    # Numeric comparison (the registry owns the expression parser).
     if any(op in text for op in (">=", "<=", ">", "<")):
-        return (lambda v: _numeric_ok(v, text)), True
+        return (lambda v: _rules.apply("numeric_range", v, {"expr": text})), True
     # Unexpressible -> human. Never invent a predicate.
     return (None, False)
 
 
 def _numeric_ok(value: str, rule: str) -> bool:
-    import re as _re
-    m = _re.search(r"(>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)", rule)
-    if not m:
-        return False
-    try:
-        num = float(value)
-    except (ValueError, TypeError):
-        return False
-    op, target = m.group(1), float(m.group(2))
-    return {">=": num >= target, "<=": num <= target,
-            ">": num > target, "<": num < target}[op]
+    """Backward-compatible alias to the registry's numeric implementation."""
+    from sheet_solution.sheets.rules import registry as _rules
+    return _rules.numeric_ok(value, rule)
 
 
 def run(config: CheckConfig, rows: list[dict], key: str = "row") -> list[CheckResult]:

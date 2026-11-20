@@ -6,6 +6,12 @@ Everything here is **synthetic** — no real customer data, no PII.
   passport-style photo). This is what the CI Docker run and `make run` use.
 - `compare-baseline.xlsx` + `compare-new.xlsx` — a two-sheet pair for the
   `compare` command.
+- `policy.example.json`, `policy.example.yaml`, `policy-sheet.example.csv` —
+  the same policy in three formats (JSON, restricted YAML, key/value sheet).
+  All normalise to one schema. `parse-policy` echoes what was understood:
+  ```
+  python -m sheet_solution parse-policy --policy examples/policy.example.yaml
+  ```
 - `check-template.example.txt` — a filled-in check template covering all
   three check kinds:
   - `no blank` (machine) — a value must be present

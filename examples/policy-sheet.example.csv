@@ -1,0 +1,17 @@
+﻿key,value
+version,1
+defaults.on_unresolved,propose
+defaults.confirm_required,true
+checks.0.id,QA-THRESHOLD
+checks.0.column,qa_score
+checks.0.rule,numeric_range
+checks.0.params.min,60
+checks.0.severity,high
+checks.0.on_fail.actions,"[""tag_row""]"
+checks.0.on_fail.confirm_required,true
+checks.1.id,REVIEW-PRESENT
+checks.1.column,review_status
+checks.1.rule,not_blank
+checks.1.severity,medium
+compatibility.required_columns,"[""applicant_id"",""qa_score""]"
+compatibility.allowed_values.review_status,"[""approved"",""rejected""]"

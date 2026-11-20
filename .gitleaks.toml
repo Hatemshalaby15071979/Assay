@@ -1,0 +1,11 @@
+# gitleaks configuration — Sheet Solution
+#
+# Local use only:  gitleaks detect --source . --config .gitleaks.toml
+# CI uses tooling/security/scan_history_secrets.py as the required,
+# fail-closed history gate.
+#
+# `useDefault = true` keeps the built-in rule set. Supplying a config without
+# it would replace the rules and silently scan nothing.
+
+[extend]
+useDefault = true

@@ -32,5 +32,7 @@ construction, not by policy.
 
 ## Reporting
 
-Security issues: [security contact placeholder]. No monitored reporting
-channel exists yet; this is stated honestly rather than inventing one.
+There is no monitored security mailbox yet. If you have repository access,
+open a private security advisory; otherwise do not send personal data in a
+report. This is stated honestly rather than inventing a channel. The open
+reporting item is tracked in [`RELEASE_READINESS.md`](RELEASE_READINESS.md).

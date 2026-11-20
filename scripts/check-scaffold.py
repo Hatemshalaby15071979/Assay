@@ -32,11 +32,15 @@ REQUIRED = [
     "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md",
     "pyproject.toml", "Makefile", ".gitignore", ".editorconfig",
     ".dockerignore", "Dockerfile", "docker-compose.yml",
-    "PROVENANCE.md", "SECURITY.md",
+    "PROVENANCE.md", "SECURITY.md", "RELEASE_READINESS.md", ".gitleaks.toml",
     # packaging
     "requirements.lock",
     # tool entry points
     "run.sh", "gui.sh", "gui/main.py", "gui/README.md",
+    "scripts/check-doc-consistency.py", "scripts/scale-stress.py",
+    # security tooling
+    "tooling/security/scan_history_secrets.py",
+    "tooling/security/history-scan-exceptions.json",
     # source spine (inherited) + new sheet layer
     "src/sheet_solution/__init__.py", "src/sheet_solution/__main__.py",
     "src/sheet_solution/cli.py",
@@ -45,7 +49,7 @@ REQUIRED = [
     "src/sheet_solution/sheets/__init__.py",
     "src/sheet_solution/sheets/template.py", "src/sheet_solution/sheets/runner.py",
     "src/sheet_solution/sheets/report.py", "src/sheet_solution/sheets/images.py",
-    "src/sheet_solution/sheets/compare.py",
+    "src/sheet_solution/sheets/compare.py", "src/sheet_solution/sheets/ledger.py",
     # GUI package (offline drag-and-drop + visual cards)
     "src/sheet_solution/gui/__init__.py", "src/sheet_solution/gui/main.py",
     "src/sheet_solution/gui/index.html",
@@ -55,13 +59,30 @@ REQUIRED = [
     "src/sheet_solution/core/ingest/csv_normaliser.py",
     "src/sheet_solution/core/render/pdf_renderer.py",
     "src/sheet_solution/core/model/decision_event.py",
+    # policy + rules + ops tasks (one schema, three input formats)
+    "src/sheet_solution/core/policy/__init__.py",
+    "src/sheet_solution/core/policy/schema.py",
+    "src/sheet_solution/core/policy/yaml_lite.py",
+    "src/sheet_solution/core/policy/loader.py",
+    "src/sheet_solution/core/policy/validator.py",
+    "src/sheet_solution/sheets/rules/__init__.py",
+    "src/sheet_solution/sheets/rules/registry.py",
+    "src/sheet_solution/sheets/analyze.py",
+    "src/sheet_solution/sheets/compatibility.py",
+    # decision loop (fail-closed propose -> decide -> apply)
+    "src/sheet_solution/sheets/actions.py",
+    "src/sheet_solution/sheets/decisions.py",
     # tests
     "tests/conftest.py", "tests/test_scaffold.py", "tests/test_sheets.py",
-    "tests/test_compare.py", "tests/test_gui.py",
+    "tests/test_compare.py", "tests/test_gui.py", "tests/test_ledger.py",
+    "tests/test_parity.py", "tests/test_policy.py", "tests/test_rules.py",
+    "tests/test_analyze.py", "tests/test_decisions.py",
     # docs
     "docs/ARCHITECTURE.md", "docs/USER-GUIDE.md",
     # examples
     "examples/check-template.example.txt", "examples/README.md",
+    "examples/policy.example.json", "examples/policy.example.yaml",
+    "examples/policy-sheet.example.csv",
 ]
 
 ALLOW_EMPTY: set[str] = set()

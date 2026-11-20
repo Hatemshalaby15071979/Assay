@@ -11,6 +11,13 @@ the machine it runs on.
 
 </div>
 
+## Status
+
+**Sheet Solution 0.3.0** — a pre-release candidate, offline by construction.
+This README is the single source of truth for project status; the dated
+release record, finding register and owner sign-off live in
+[`RELEASE_READINESS.md`](RELEASE_READINESS.md).
+
 ## What is this?
 
 Sheet Solution automates a manual daily task: **open a sheet, check what you
@@ -63,7 +70,13 @@ pip install "sheet-solution[xlsx]"        # CSV needs nothing else; xlsx needs o
 python -m sheet_solution run --sheet examples/example-sheet.xlsx \
      --template examples/check-template.example.txt --out out/report
 python -m sheet_solution verify --out out/report     # -> VERIFIED-STRUCTURE
+python -m sheet_solution ledger --out out/report verify   # intent/result chain
 ```
+
+Every run writes a durable intent before it starts and a result after it
+finishes (`out/report/.audit/ledger.jsonl`). If the process is interrupted,
+`ledger --out out/report pending` shows the unfinished intent instead of
+silently leaving a partial report.
 
 ## Also: compare two sheets
 
@@ -80,6 +93,49 @@ python -m sheet_solution compare \
   --key item_id --fields amount,status --out out/compare
 ```
 
+## Beyond pass/fail: policies, analyze, compatibility
+
+Day-to-day sheet work is more than pass/fail. Sheet Solution now handles the
+operations tasks people actually repeat:
+
+- **Decide with a policy, not a guess.** A plain policy file (JSON or a small
+  YAML subset) — or a two-column policy sheet you drop in — declares the
+  rules and what a failure may do (`tag_row`, `flag_for_human`, ...). Every
+  input format normalises to one validated schema; anything unknown is
+  refused. Declared actions are acted on only after a human confirms them.
+  Validate and echo what the machine understood:
+  ```
+  python -m sheet_solution parse-policy --policy examples/policy.example.yaml
+  ```
+- **Decide, fail closed.** Failed checks become proposals; nothing is applied
+  unless a named human approves it. Denying an action applies nothing and keeps
+  the other options (plus a `flag_for_human` fallback) available for a human to
+  choose. From a completed `run` pack:
+  ```
+  python -m sheet_solution decisions plan --out out/run --policy policy.json
+  python -m sheet_solution decisions decide --out out/run --finding-id F-... \
+    --action approve --actor alice          # approve | decline | re-propose | apply
+  python -m sheet_solution decisions list --out out/run
+  ```
+  Approving is not applying: only `decide --action apply` executes the named
+  action and writes `corrected-copy.jsonl`. Every transition is recorded in the
+  hash-chained ledger with the human actor; the deterministic `decisions.json`
+  never carries that runtime evidence.
+- **Analyze** a sheet: types, blanks, distinct counts, numeric/date ranges.
+  ```
+  python -m sheet_solution analyze --sheet examples/example-sheet.xlsx --out out/analyze
+  ```
+- **Compatibility**: can two sheets be combined? Checks required columns,
+  cross-sheet type agreement and allowed value domains from a policy — a
+  defensible COMPATIBLE / INCOMPATIBLE (exit 1), not a "looks fine".
+  ```
+  python -m sheet_solution compatibility \
+    --sheet-a baseline.xlsx --sheet-b new.xlsx --policy policy.json --out out/compat
+  ```
+
+All of these are offline, deterministic and write the same durable
+intent/result ledger as `run`/`compare`.
+
 ## Three ways to use it (all offline)
 
 - **CLI** — `python -m sheet_solution …` (fast, scriptable, cron-able),
@@ -91,7 +147,7 @@ python -m sheet_solution compare \
 ## Where the pieces come from
 
 The deterministic spine (hash chain, renderers, verification, offline
-guarantees, 151 passing tests) is reused from **Signoff 0.1.0** — see
+guarantees, and the full test suite) is reused from **Signoff 0.1.0** — see
 [`PROVENANCE.md`](PROVENANCE.md) for the exact lineage. The sheet-comparison
 layer, CLI, GUI, and distribution are new to this repository.
 

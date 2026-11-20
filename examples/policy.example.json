@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "defaults": {
+    "on_unresolved": "propose",
+    "confirm_required": true
+  },
+  "checks": [
+    {
+      "id": "QA-THRESHOLD",
+      "column": "qa_score",
+      "rule": "numeric_range",
+      "params": {"min": 60},
+      "severity": "high",
+      "on_fail": {
+        "actions": ["tag_row"],
+        "confirm_required": true
+      }
+    },
+    {
+      "id": "REVIEW-PRESENT",
+      "column": "review_status",
+      "rule": "not_blank",
+      "severity": "medium"
+    }
+  ],
+  "compatibility": {
+    "required_columns": ["applicant_id", "qa_score"],
+    "allowed_values": {
+      "review_status": ["approved", "rejected"]
+    }
+  }
+}

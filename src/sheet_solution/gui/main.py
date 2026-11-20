@@ -157,18 +157,37 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
         seed = (a_path.name + b_path.name + key + ",".join(fields)
                 + tolerance).encode("utf-8")
         spool = _new_spool_for(seed)
-        a_rows = _load_rows(a_path)
-        b_rows = _load_rows(b_path)
-        result = cmp_mod.compare(a_rows, b_rows, key, fields, tolerance)
         out = spool / "out"; out.mkdir(parents=True, exist_ok=True)
-        (out / "compare-report.csv").write_text(result.csv(), encoding="utf-8")
-        logrec = {"kind": "compare", "key": key, "fields": fields,
-                  "tolerance": tolerance,
-                  "totals": {"a": result.total_a, "b": result.total_b,
-                             "matched": result.matched, "changed": result.changed,
-                             "only_a": result.only_a, "only_b": result.only_b}}
-        (out / "compare-log.jsonl").write_text(json.dumps(logrec, sort_keys=True) + "\n",
-                                                encoding="utf-8")
+        from sheet_solution.sheets.ledger import Ledger
+        from sheet_solution.core.engine.hash_chain import sha256_bytes
+        ledger = Ledger(out / ".audit" / "ledger.jsonl")
+        intent = ledger.append_intent("compare", "gui", {
+            "sheet_a": a_path.name, "sheet_b": b_path.name,
+            "key": key, "fields": fields, "tolerance": tolerance,
+        })
+        try:
+            a_rows = _load_rows(a_path)
+            b_rows = _load_rows(b_path)
+            result = cmp_mod.compare(a_rows, b_rows, key, fields, tolerance)
+            report_text = result.csv()
+            logrec = {"kind": "compare", "key": key, "fields": fields,
+                      "tolerance": tolerance,
+                      "totals": {"a": result.total_a, "b": result.total_b,
+                                 "matched": result.matched, "changed": result.changed,
+                                 "only_a": result.only_a, "only_b": result.only_b}}
+            log_text = json.dumps(logrec, sort_keys=True) + "\n"
+            (out / "compare-report.csv").write_text(report_text, encoding="utf-8")
+            (out / "compare-log.jsonl").write_text(log_text, encoding="utf-8")
+            ledger.append_result(intent, "compare.completed", "gui", {
+                "totals": logrec["totals"],
+                "artifacts": {
+                    "compare-report.csv": sha256_bytes(report_text.encode("utf-8")),
+                    "compare-log.jsonl": sha256_bytes(log_text.encode("utf-8")),
+                },
+            })
+        except Exception as exc:
+            ledger.append_result(intent, "compare.failed", "gui", {"error": str(exc)})
+            raise
         return jsonify({"ok": True, "summary": result.summary(),
                         "totals": logrec["totals"], "rows": [
                             {"key": r.key, "status": r.status,
