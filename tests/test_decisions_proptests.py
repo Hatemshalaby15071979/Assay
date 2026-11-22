@@ -20,122 +20,139 @@ import json
 # They are designed for staged preview; full proptests planned for stable
 
 def test_decision_proposal_is_deterministic():
-    """Given the same input, decisions.json is byte-identical."""
-    from sheet_solution.sheets.decisions import plan_decisions
+    """The same proposal should produce the same deterministic output."""
+    from sheet_solution.sheets.decisions import Finding, propose
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Setup: create minimal check-results and policy
-        results_path = Path(tmpdir) / "check-results.csv"
-        results_path.write_text(
-            "finding_id,check_name,row_key,status,message\n"
-            "F-001,email_present,ROW-001,FAIL,Missing email\n"
-            "F-002,name_present,ROW-002,PASS,Name OK\n"
-        )
+    # Create same finding twice
+    finding = Finding(
+        finding_id="F-001", check_id="check1", row_id="row1",
+        column="col1", value="val", detail="test"
+    )
+    options = ("flag_for_human", "tag_row")
 
-        policy_path = Path(tmpdir) / "policy.json"
-        policy_path.write_text(json.dumps({
-            "version": "1.0.0",
-            "decisions": [
-                {
-                    "finding_id": "F-001",
-                    "actions": ["flag_for_human", "tag_row"]
-                }
-            ]
-        }))
+    # Create two proposals
+    d1 = propose(finding, options)
+    d2 = propose(finding, options)
 
-        # Run plan twice
-        out1 = Path(tmpdir) / "decisions1.json"
-        out2 = Path(tmpdir) / "decisions2.json"
-
-        plan_decisions(str(results_path), str(policy_path), str(out1))
-        plan_decisions(str(results_path), str(policy_path), str(out2))
-
-        # Byte-identical output
-        with open(out1) as f1, open(out2) as f2:
-            assert f1.read() == f2.read(), "Plan must be deterministic"
+    # Should have same serialization
+    assert d1.to_dict() == d2.to_dict()
 
 
 def test_decision_state_machine_only_applies_from_approved():
     """The state machine rejects apply without APPROVED state."""
-    from sheet_solution.sheets.decisions import DecisionState, apply_decision
+    from sheet_solution.sheets.decisions import (
+        PROPOSED, APPROVED, DECLINED, APPLIED, apply_ok, mark_applied,
+        propose, approve, decline, Finding, DecisionError
+    )
 
-    # Test all valid states
-    for state in DecisionState:
-        result = apply_decision(state)
-        if state != DecisionState.APPROVED:
-            assert result is False, f"apply() must reject state {state}"
+    finding = Finding(
+        finding_id="F-TEST", check_id="check1", row_id="row1",
+        column="col1", value="val", detail="test"
+    )
+    options = ("flag_for_human", "tag_row")
 
-    # Test that APPROVED allows
-    assert apply_decision(DecisionState.APPROVED) is True
+    # PROPOSED -> cannot apply directly
+    d1 = propose(finding, options)
+    assert apply_ok(d1) is False
+    with pytest.raises(DecisionError):
+        mark_applied(d1, "test")
+
+    # APPROVED -> can apply
+    d2 = approve(d1, "alice")
+    assert apply_ok(d2) is True
+
+    # After apply, state is APPLIED and no longer apply_ok
+    d3 = mark_applied(d2, "alice")
+    assert d3.state == APPLIED
+    assert apply_ok(d3) is False
 
 
 def test_decision_ledger_records_all_transitions():
     """Every state transition is recorded in the hash-chained ledger."""
     import hashlib
-    from sheet_solution.sheets.ledger import Ledger
+    from sheet_solution.sheets.ledger import Ledger, verify_ledger, DECISION_TYPE
 
     with tempfile.TemporaryDirectory() as tmpdir:
         ledger_path = Path(tmpdir) / "ledger.jsonl"
-        ledger = Ledger()
+        ledger = Ledger(ledger_path)
 
-        # Record a decision transition
-        entry = {
-            "finding_id": "F-001",
-            "from_state": "PROPOSED",
-            "to_state": "APPROVED",
-            "actor": "alice",
-            "note": "Approved for review"
-        }
+        # Create a finding and decision
+        from sheet_solution.sheets.decisions import Finding, propose, approve
 
-        ledger.write(entry, ledger_path)
+        finding = Finding(
+            finding_id="F-001", check_id="check1", row_id="row1",
+            column="col1", value="val", detail="test"
+        )
+        decision = propose(finding, ("flag_for_human",))
 
-        # Verify hash chain
-        with open(ledger_path) as f:
-            lines = f.readlines()
+        # Record the proposal
+        ledger.append_proposal(decision, "system")
 
-        assert len(lines) == 1
-        # Hash is SHA-256 based
-        entry_bytes = json.dumps(entry, sort_keys=True).encode()
-        expected_hash = hashlib.sha256(entry_bytes).hexdigest()[:16]
-        assert expected_hash in lines[0]
+        # Approve the decision
+        approved = approve(decision, "alice")
+        ledger.append_decision(approved, "alice", "approve")
+
+        # Verify the ledger has 2 entries
+        events = ledger.decision_events()
+        assert len(events) == 2
+
+        # Verify the chain is valid
+        result = verify_ledger(ledger_path)
+        assert result["ok"] is True
+        assert result["count"] == 2
 
 
 def test_decline_leaves_alternatives_available():
     """Declining an action preserves other options."""
-    from sheet_solution.sheets.decisions import Decision, DecisionState
-
-    # Create a decision with multiple proposed actions
-    decision = Decision(
-        finding_id="F-001",
-        proposed_actions=["flag_for_human", "tag_row", "reject"],
-        state=DecisionState.PROPOSED
+    from sheet_solution.sheets.decisions import (
+        Finding, propose, decline, DECLINED
     )
 
-    # Decline (not a terminal state)
-    decision.decline("not relevant")
+    # Create a finding with multiple options
+    finding = Finding(
+        finding_id="F-001", check_id="check1", row_id="row1",
+        column="col1", value="val", detail="test"
+    )
+    options = ("flag_for_human", "tag_row", "reject")
 
-    # Decision should still have options
-    assert decision.state == DecisionState.DECLINED
-    # Proposed actions should still be available for re-propose
-    assert len(decision.available_actions) == 3 or decision.re_propose_allowed
+    # Create a PROPOSED decision
+    decision = propose(finding, options)
+
+    # Decline one option (the first one - flag_for_human)
+    decision = decline(decision, "bob", "not right")
+
+    # Decision should be DECLINED
+    assert decision.state == DECLINED
+    # Alternatives should be the remaining options
+    assert "tag_row" in decision.alternatives()
+    assert "reject" in decision.alternatives()
 
 
 def test_apply_is_terminal():
     """Once APPLIED, no further transitions are allowed."""
-    from sheet_solution.sheets.decisions import Decision, DecisionState
-
-    decision = Decision(
-        finding_id="F-001",
-        proposed_actions=["flag_for_human"],
-        state=DecisionState.APPROVED
+    from sheet_solution.sheets.decisions import (
+        Finding, propose, approve, mark_applied, APPLIED, apply_ok,
+        DecisionError
     )
 
-    decision.apply()
+    # Create a finding with one option
+    finding = Finding(
+        finding_id="F-001", check_id="check1", row_id="row1",
+        column="col1", value="val", detail="test"
+    )
+    options = ("flag_for_human",)
 
-    # No further transitions
-    assert decision.state == DecisionState.APPLIED
-    # No more actions available
-    assert decision.available_actions == []
+    # Create PROPOSED -> APPROVE -> APPLY
+    decision = propose(finding, options)
+    decision = approve(decision, "alice")
+    decision = mark_applied(decision, "alice")
+
+    # State is APPLIED
+    assert decision.state == APPLIED
+    # apply_ok returns False for APPLIED (terminal state)
+    assert apply_ok(decision) is False
+    # applied_action is recorded
+    assert decision.applied_action == "flag_for_human"
 
 
 # TODO: Add hypothesis-based proptests for:
