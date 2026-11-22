@@ -3,7 +3,7 @@ name: CI
 # Verification gate only — a green run is not a release decision. The dated
 # release record and finding register live in RELEASE_READINESS.md.
 #
-# Sheet Solution is offline-by-construction; this also builds the Docker
+# Assay is offline-by-construction; this also builds the Docker
 # image and runs it under `--network none` to prove the guarantee.
 
 on:
@@ -53,6 +53,14 @@ jobs:
           python scripts/check-offline.py
           python scripts/check-doc-consistency.py
 
+      - name: GUI import lint (installable via the [gui] extra)
+        run: |
+          python -m pip install -e ".[gui]"
+          python -c "import sheet_solution.gui.main; print('gui import OK')"
+
+      - name: GUI smoke test (live Flask server + POSTs)
+        run: python scripts/gui-smoke-test.py
+
       - name: Test suite (inherited spine + new sheet layer)
         run: PYTHONPATH=src python -m pytest --cov=src/sheet_solution -q
 
@@ -86,20 +94,56 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t sheet-solution:ci .
+        run: docker build -t assay:ci .
 
       - name: Run the sheet audit inside the image, fully offline
         run: |
+          # The container starts as root so the entrypoint can chown the /out
+          # volume (docker creates named volumes root-owned; a non-root user
+          # cannot chown them), then drops to sheetsol via runuser for the
+          # workload. The workload itself still runs non-root.
           docker run --rm --network none --read-only \
             -v "$PWD/examples:/data:ro" \
-            -v "$PWD/out/docker-report:/out" \
-            sheet-solution:ci run \
+            -v ss-ci-out:/out \
+            assay:ci run \
               --sheet /data/example-sheet.xlsx \
               --template /data/check-template.example.txt \
               --out /out/report
           docker run --rm --network none \
-            -v "$PWD/out/docker-report:/out:ro" \
-            sheet-solution:ci verify --out /out/report
+            -v ss-ci-out:/out:ro \
+            assay:ci verify --out /out/report
+
+  prerelease:
+    name: Prerelease image (assay:0.4.0)
+    needs: [test, determinism, docker, browser, package, security, docs_consistency]
+    runs-on: ubuntu-latest
+    # Only publish the pinned prerelease tag on a tag push or manual dispatch;
+    # never on a branch push. Staged to the prerelease channel until 1.0.
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v0.') }}
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build prerelease image
+        run: docker build -t "assay:${{ steps.tag.outputs.TAG }}" -t "assay:0.4.0" .
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push prerelease image
+        run: |
+          docker push "ghcr.io/${{ github.repository }}:${{ steps.tag.outputs.TAG }}"
+          docker push "ghcr.io/${{ github.repository }}:0.4.0"
 
   browser:
     name: Browser regression (Playwright)
@@ -113,7 +157,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install pinned dev dependencies
         run: |
@@ -181,7 +225,7 @@ jobs:
           python -m venv /tmp/ss-venv
           /tmp/ss-venv/bin/pip install --require-hashes -r requirements.lock
           /tmp/ss-venv/bin/pip install --no-deps dist/*.whl
-          /tmp/ss-venv/bin/sheet-solution --help
+          /tmp/ss-venv/bin/assay --help
           /tmp/ss-venv/bin/python -m sheet_solution --help
 
       - name: Generate runtime SBOM
@@ -191,12 +235,12 @@ jobs:
           /tmp/ss-sbom/bin/cyclonedx-py environment /tmp/ss-venv \
             --pyproject pyproject.toml \
             --output-reproducible \
-            --output-file /tmp/sheet-solution-runtime.cdx.json
+            --output-file /tmp/assay-runtime.cdx.json
           python - <<'PY'
           import json
           from pathlib import Path
 
-          bom = json.loads(Path("/tmp/sheet-solution-runtime.cdx.json").read_text())
+          bom = json.loads(Path("/tmp/assay-runtime.cdx.json").read_text())
           names = {
               item["name"].lower().replace("_", "-")
               for item in bom.get("components", [])
@@ -204,7 +248,7 @@ jobs:
           root = bom.get("metadata", {}).get("component", {})
           if root.get("name"):
               names.add(root["name"].lower().replace("_", "-"))
-          required = {"sheet-solution", "fpdf2", "openpyxl", "pillow", "defusedxml"}
+          required = {"assay", "fpdf2", "openpyxl", "pillow", "defusedxml"}
           missing = required - names
           if missing:
               raise SystemExit(f"SBOM is missing runtime components: {sorted(missing)}")
