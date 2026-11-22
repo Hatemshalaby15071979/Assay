@@ -1,4 +1,4 @@
-"""Sheet Solution — report assembly.
+"""Assay — report assembly.
 
 Builds the check-results report (CSV) and routes image/semantic checks to
 the inherited hash-chain + render + verify pipeline so the output stays

@@ -1,4 +1,4 @@
-"""Sheet Solution — CLI.
+"""Assay — CLI.
 
 One command surface, fully offline, deterministic:
 

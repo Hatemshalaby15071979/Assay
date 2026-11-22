@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sheet Solution — GUI decision-loop E2E (REAL browser, no audit theater).
+# Assay — GUI decision-loop E2E (REAL browser, no audit theater).
 #
 # Drives the actual GUI in a real browser through the fail-closed loop:
 #   run checks -> plan proposals -> deny -> see alternatives -> re-propose

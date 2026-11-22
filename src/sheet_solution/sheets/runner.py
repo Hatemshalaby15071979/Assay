@@ -1,4 +1,4 @@
-"""Sheet Solution — deterministic check runner.
+"""Assay — deterministic check runner.
 
 Runs machine-checkable rules against a loaded sheet. Every result carries
 full source traceability (row, column, before/expected). Checks that need

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="Offline, deterministic sheet audit console. Zero network, PII local.">
-<title>Sheet Solution — Offline Audit Console</title>
+<title>Assay — Offline Audit Console</title>
 <style>
   /* ============================================================
      PHOSPHOR // AUDIT CONSOLE
@@ -400,7 +400,7 @@
     <div class="brand">
       <span class="led" aria-hidden="true"></span>
       <div>
-        <div class="wordmark">SHEET<span class="slash">//</span>SOLUTION</div>
+        <div class="wordmark">ASSAY</div>
         <div class="micro">Offline audit node</div>
       </div>
     </div>
@@ -438,6 +438,22 @@
           <span class="mode-sub">findings → propose / deny / apply</span>
         </span>
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg>
+      </button>
+      <button id="tab-template-builder" class="mode" role="tab" aria-selected="false" aria-controls="pane-template-builder">
+        <span class="mode-index">04</span>
+        <span class="mode-body">
+          <span class="mode-title">Template Builder</span>
+          <span class="mode-sub">visual check template creator</span>
+        </span>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"/></svg>
+      </button>
+      <button id="tab-policy-builder" class="mode" role="tab" aria-selected="false" aria-controls="pane-policy-builder">
+        <span class="mode-index">05</span>
+        <span class="mode-body">
+          <span class="mode-title">Policy Builder</span>
+          <span class="mode-sub">visual policy setup</span>
+        </span>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>
       </button>
     </div>
 
@@ -628,6 +644,152 @@
         </div>
       </div>
     </section>
+
+    <!-- ============ TEMPLATE BUILDER ============ -->
+    <section id="pane-template-builder" class="hidden" role="tabpanel" aria-labelledby="tab-template-builder">
+      <div class="console-grid">
+        <div class="bay">
+          <div class="bay-head"><span class="micro">Builder bay</span><span class="micro">Steps 01–03</span></div>
+
+          <div class="drop" data-for="template-sheet" id="drop-template-sheet">
+            <div class="drop-top">
+              <div class="drop-id"><span class="drop-index">01</span><span class="drop-label">Template Sheet</span></div>
+              <span class="drop-state" id="state-template-sheet" data-state="empty">Empty</span>
+            </div>
+            <div class="drop-slot">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file"/></svg>
+              <div class="hint">Drop a sheet with check definitions, or <button type="button" class="pick" data-for="template-sheet">choose a file</button>.</div>
+            </div>
+            <div class="name" aria-live="polite"></div>
+            <div class="preview"></div>
+          </div>
+
+          <div class="drop" data-for="template-output" id="drop-template-output">
+            <div class="drop-top">
+              <div class="drop-id"><span class="drop-index">02</span><span class="drop-label">Output Template</span></div>
+              <span class="drop-state" id="state-template-output" data-state="empty">Empty</span>
+            </div>
+            <div class="drop-slot">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg>
+              <div class="hint">Generated template will appear here for download.</div>
+            </div>
+            <div class="name" aria-live="polite"></div>
+            <div class="preview"></div>
+          </div>
+
+          <div class="fields">
+            <label for="tpl-persona">Persona
+              <select id="tpl-persona">
+                <option value="auditor">Auditor (pass/fail / human)</option>
+                <option value="verifier">Verifier (expected values)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="go" id="build-template" disabled>
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"/></svg><span>Build template</span><kbd>↵</kbd>
+            </button>
+            <button class="ghost" id="reset-template-builder">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-reset"/></svg>Start over
+            </button>
+          </div>
+          <div class="err" id="err-template-builder" role="alert"></div>
+          <div class="notice" id="notice-template-builder" role="status"></div>
+        </div>
+
+        <div class="readout">
+          <div class="readout-head">
+            <span class="micro">Template Preview</span>
+            <span class="micro" id="tpl-readout-state" data-state="idle">Idle</span>
+          </div>
+          <div class="empty" id="empty-template-builder">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"/></svg>
+            <p class="empty-title">Awaiting template sheet</p>
+            <p class="micro">Drop a sheet with check definitions to build the template.</p>
+          </div>
+          <div id="results-template-builder"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ POLICY BUILDER ============ -->
+    <section id="pane-policy-builder" class="hidden" role="tabpanel" aria-labelledby="tab-policy-builder">
+      <div class="console-grid">
+        <div class="bay">
+          <div class="bay-head"><span class="micro">Builder bay</span><span class="micro">Steps 01–04</span></div>
+
+          <div class="drop" data-for="policy-config" id="drop-policy-config">
+            <div class="drop-top">
+              <div class="drop-id"><span class="drop-index">01</span><span class="drop-label">Policy Config</span></div>
+              <span class="drop-state" id="state-policy-config" data-state="empty">Empty</span>
+            </div>
+            <div class="drop-slot">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file"/></svg>
+              <div class="hint">Drop a JSON/YAML policy file, or <button type="button" class="pick" data-for="policy-config">choose a file</button>.</div>
+            </div>
+            <div class="name" aria-live="polite"></div>
+            <div class="preview"></div>
+          </div>
+
+          <div class="drop" data-for="policy-output" id="drop-policy-output">
+            <div class="drop-top">
+              <div class="drop-id"><span class="drop-index">02</span><span class="drop-label">Output Policy</span></div>
+              <span class="drop-state" id="state-policy-output" data-state="empty">Empty</span>
+            </div>
+            <div class="drop-slot">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg>
+              <div class="hint">Generated policy will appear here for download.</div>
+            </div>
+            <div class="name" aria-live="polite"></div>
+            <div class="preview"></div>
+          </div>
+
+          <div class="fields">
+            <label for="poly-version">Policy Version
+              <input id="poly-version" placeholder="1" autocomplete="off" spellcheck="false">
+            </label>
+            <label for="poly-on-unresolved">On Unresolved
+              <select id="poly-on-unresolved">
+                <option value="propose">propose</option>
+                <option value="flag">flag</option>
+                <option value="block">block</option>
+              </select>
+            </label>
+            <label for="poly-confirm">Confirm Required
+              <select id="poly-confirm">
+                <option value="true">yes</option>
+                <option value="false">no</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="go" id="build-policy" disabled>
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg><span>Build policy</span><kbd>↵</kbd>
+            </button>
+            <button class="ghost" id="reset-policy-builder">
+              <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-reset"/></svg>Start over
+            </button>
+          </div>
+          <div class="err" id="err-policy-builder" role="alert"></div>
+          <div class="notice" id="notice-policy-builder" role="status"></div>
+        </div>
+
+        <div class="readout">
+          <div class="readout-head">
+            <span class="micro">Policy Preview</span>
+            <span class="micro" id="poly-readout-state" data-state="idle">Idle</span>
+          </div>
+          <div class="empty" id="empty-policy-builder">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>
+            <p class="empty-title">Awaiting policy config</p>
+            <p class="micro">Drop a policy file or sheet to build the policy.</p>
+          </div>
+          <div id="results-policy-builder"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="foot">
@@ -642,15 +804,26 @@
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 
 <script>
-const state = {checks:{sheet:null,template:null},compare:{A:null,B:null},decisions:{policy:null,out:'',actor:''}};
-const dropOf = {sheet:'drop-sheet',template:'drop-template',sheetA:'drop-A',sheetB:'drop-B',policy:'drop-policy'};
-const bucketOf = {sheet:'checks',template:'checks',sheetA:'compare',sheetB:'compare',policy:'decisions'};
-const storeKey = {sheet:'sheet',template:'template',sheetA:'A',sheetB:'B',policy:'policy'};
-const stateOf = {sheet:'state-sheet',template:'state-template',sheetA:'state-sheetA',sheetB:'state-sheetB',policy:'state-policy'};
+const state = {checks:{sheet:null,template:null},compare:{A:null,B:null},decisions:{policy:null,out:'',actor:''},
+  templateBuilder:{sheet:null,output:null},policyBuilder:{config:null,output:null}};
+const dropOf = {sheet:'drop-sheet',template:'drop-template',sheetA:'drop-A',sheetB:'drop-B',policy:'drop-policy',
+  'template-sheet':'drop-template-sheet','template-output':'drop-template-output',
+  'policy-config':'drop-policy-config','policy-output':'drop-policy-output'};
+const bucketOf = {sheet:'checks',template:'checks',sheetA:'compare',sheetB:'compare',policy:'decisions',
+  'template-sheet':'templateBuilder','template-output':'templateBuilder',
+  'policy-config':'policyBuilder','policy-output':'policyBuilder'};
+const storeKey = {sheet:'sheet',template:'template',sheetA:'A',sheetB:'B',policy:'policy',
+  'template-sheet':'sheet','template-output':'output',
+  'policy-config':'config','policy-output':'output'};
+const stateOf = {sheet:'state-sheet',template:'state-template',sheetA:'state-sheetA',sheetB:'state-sheetB',policy:'state-policy',
+  'template-sheet':'state-template-sheet','template-output':'state-template-output',
+  'policy-config':'state-policy-config','policy-output':'state-policy-output'};
 
 const RUN_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-play"/></svg><span>Run checks</span><kbd>↵</kbd>';
 const COMPARE_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-compare"/></svg><span>Compare</span><kbd>↵</kbd>';
 const PLAN_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-decide"/></svg><span>Plan decisions</span><kbd>↵</kbd>';
+const TEMPLATE_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-upload"/></svg><span>Build template</span><kbd>↵</kbd>';
+const POLICY_LABEL = '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg><span>Build policy</span><kbd>↵</kbd>';
 
 // Read a response safely: if the server returns a non-JSON body (e.g. an HTML
 // 500 page) show the status + snippet instead of a misleading "node down".
@@ -702,7 +875,9 @@ document.addEventListener('click', e=>{
   if(!btn) return;
   pendingKey = btn.dataset.for;
   fileInput.accept = pendingKey==='template' ? '.txt,.md'
-    : pendingKey==='policy' ? '.json,.yaml,.yml,.csv,.xlsx' : '.xlsx,.csv';
+    : pendingKey==='policy' ? '.json,.yaml,.yml,.csv,.xlsx'
+    : pendingKey==='template-sheet' ? '.xlsx,.csv'
+    : pendingKey==='policy-config' ? '.json,.yaml,.yml,.csv' : '.xlsx,.csv';
   fileInput.click();
 });
 
@@ -710,6 +885,8 @@ function storeUpload(key, r){
   const bucket = bucketOf[key];
   if (bucket==='checks') state.checks[storeKey[key]]=r;
   else if (bucket==='decisions') state.decisions[storeKey[key]]=r;
+  else if (bucket==='templateBuilder') state.templateBuilder[storeKey[key]]=r;
+  else if (bucket==='policyBuilder') state.policyBuilder[storeKey[key]]=r;
   else state.compare[storeKey[key]]=r;
   const el = document.getElementById(dropOf[key]);
   const nameEl = el.querySelector('.name');
@@ -786,23 +963,29 @@ function refresh(){
       document.getElementById('cmp-fields').value.trim());
   document.getElementById('plan-decisions').disabled =
     !(state.decisions.policy && document.getElementById('dec-out').value.trim());
+  document.getElementById('build-template').disabled = !state.templateBuilder.sheet;
+  document.getElementById('build-policy').disabled = !state.policyBuilder.config;
 }
 document.getElementById('cmp-key').addEventListener('input',refresh);
 document.getElementById('cmp-fields').addEventListener('input',refresh);
 document.getElementById('cmp-tol').addEventListener('input',refresh);
 document.getElementById('dec-out').addEventListener('input',refresh);
 document.getElementById('dec-actor').addEventListener('input',refresh);
+refresh();
 
 document.getElementById('tab-checks').onclick=()=>switchPane('checks');
 document.getElementById('tab-compare').onclick=()=>switchPane('compare');
 document.getElementById('tab-decide').onclick=()=>switchPane('decide');
+document.getElementById('tab-template-builder').onclick=()=>switchPane('template-builder');
+document.getElementById('tab-policy-builder').onclick=()=>switchPane('policy-builder');
 function switchPane(p){
-  ['checks','compare','decide'].forEach(name=>{
+  ['checks','compare','decide','template-builder','policy-builder'].forEach(name=>{
     document.getElementById('pane-'+name).classList.toggle('hidden',p!==name);
     const tab=document.getElementById('tab-'+name);
     tab.classList.toggle('active',p===name);
     tab.setAttribute('aria-selected', String(p===name));
   });
+  refresh();
 }
 
 /* ---- run checks ---- */
@@ -1168,6 +1351,129 @@ function dlBlock(out,mode='checks'){
     links.map(([href,label])=>`<a href="${href}"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download"/></svg>${label}</a>`).join('') +
     `</div>`;
 }
+
+/* ---- template builder ---- */
+document.getElementById('build-template').onclick = async ()=>{
+  showErr('template-builder',''); showNotice('template-builder','');
+  const btn = document.getElementById('build-template');
+  btn.disabled = true; btn.innerHTML = TEMPLATE_LABEL; btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Building';
+  setReadoutState('template-builder','Running');
+  liveStatus('Building template.');
+  const body = {sheet: state.templateBuilder.sheet.id,
+                persona: document.getElementById('tpl-persona').value};
+  let r;
+  try { r = await postJSON('/api/template-builder', body); }
+  catch(e){
+    showErr('template-builder', e.message);
+    btn.disabled=false; btn.innerHTML=TEMPLATE_LABEL; setReadoutState('template-builder','Error'); return;
+  }
+  btn.disabled = false; btn.innerHTML = TEMPLATE_LABEL;
+  if(!r.ok){ showErr('template-builder', r.error); setReadoutState('template-builder','Error'); return; }
+  state.templateBuilder.output = r.id;
+  document.getElementById('drop-template-output').querySelector('.name').innerHTML =
+    '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>' + esc(r.name) + '</span>';
+  document.getElementById('drop-template-output').querySelector('.name').classList.add('show');
+  setDropState('template-output', true);
+  renderTemplateOutput(r);
+  refresh();
+};
+
+function renderTemplateOutput(r){
+  const box = document.querySelector('#drop-template-output .preview');
+  if(!r.checks || !r.checks.length){
+    box.innerHTML = '<div class="pv">Template ready · ' + r.name + '</div>';
+    return;
+  }
+  const summary = r.checks.map(c=>
+    `<div class="card"><div class="card-top"><span class="micro">CHK-${c.id}</span><span class="badge b-pass">${c.rule}</span></div>` +
+    `<h3 class="card-title">${esc(c.label)}</h3><p class="card-detail">${esc(c.description||'')}</p></div>`).join('');
+  document.getElementById('results-template-builder').innerHTML =
+    `<div class="summary"><span class="micro">Template built</span></div>` +
+    `<div class="cards">${summary}</div>`;
+  document.getElementById('empty-template-builder').classList.add('hidden');
+  setReadoutState('template-builder','Done');
+  liveStatus('Template built successfully.');
+}
+
+document.getElementById('reset-template-builder').onclick = ()=>{
+  state.templateBuilder = {sheet:null, output:null};
+  ['template-sheet','template-output'].forEach(k=>{
+    const el = document.getElementById(dropOf[k]);
+    const n = el.querySelector('.name'); n.innerHTML=''; n.classList.remove('show');
+    const p = el.querySelector('.preview'); if(p) p.innerHTML='';
+    setDropState(k,false);
+  });
+  document.getElementById('results-template-builder').innerHTML = '';
+  document.getElementById('empty-template-builder').classList.remove('hidden');
+  setReadoutState('template-builder','Idle');
+  showErr('template-builder',''); showNotice('template-builder','');
+  liveStatus('Template Builder reset.');
+  refresh();
+};
+
+/* ---- policy builder ---- */
+document.getElementById('build-policy').onclick = async ()=>{
+  showErr('policy-builder',''); showNotice('policy-builder','');
+  const btn = document.getElementById('build-policy');
+  btn.disabled = true; btn.innerHTML = POLICY_LABEL; btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Building';
+  setReadoutState('policy-builder','Running');
+  liveStatus('Building policy.');
+  const body = {config: state.policyBuilder.config.id,
+                version: document.getElementById('poly-version').value || '1',
+                on_unresolved: document.getElementById('poly-on-unresolved').value,
+                confirm_required: document.getElementById('poly-confirm').value === 'true'};
+  let r;
+  try { r = await postJSON('/api/policy-builder', body); }
+  catch(e){
+    showErr('policy-builder', e.message);
+    btn.disabled=false; btn.innerHTML=POLICY_LABEL; setReadoutState('policy-builder','Error'); return;
+  }
+  btn.disabled = false; btn.innerHTML = POLICY_LABEL;
+  if(!r.ok){ showErr('policy-builder', r.error); setReadoutState('policy-builder','Error'); return; }
+  state.policyBuilder.output = r.id;
+  document.getElementById('drop-policy-output').querySelector('.name').innerHTML =
+    '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><span>' + esc(r.name) + '</span>';
+  document.getElementById('drop-policy-output').querySelector('.name').classList.add('show');
+  setDropState('policy-output', true);
+  renderPolicyOutput(r);
+  refresh();
+};
+
+function renderPolicyOutput(r){
+  const box = document.querySelector('#drop-policy-output .preview');
+  if(!r.checks || !r.checks.length){
+    box.innerHTML = '<div class="pv">Policy ready · ' + r.name + '</div>';
+    return;
+  }
+  const summary = r.checks.map(c=>
+    `<div class="card"><div class="card-top"><span class="micro">${c.id}</span><span class="badge b-pass">${c.rule}</span></div>` +
+    `<h3 class="card-title">${esc(c.column)}: ${esc(c.rule)}</h3></div>`).join('');
+  document.getElementById('results-policy-builder').innerHTML =
+    `<div class="summary"><span class="micro">Policy built</span></div>` +
+    `<div class="cards">${summary}</div>`;
+  document.getElementById('empty-policy-builder').classList.add('hidden');
+  setReadoutState('policy-builder','Done');
+  liveStatus('Policy built successfully.');
+}
+
+document.getElementById('reset-policy-builder').onclick = ()=>{
+  state.policyBuilder = {config:null, output:null};
+  ['policy-config','policy-output'].forEach(k=>{
+    const el = document.getElementById(dropOf[k]);
+    const n = el.querySelector('.name'); n.innerHTML=''; n.classList.remove('show');
+    const p = el.querySelector('.preview'); if(p) p.innerHTML='';
+    setDropState(k,false);
+  });
+  document.getElementById('poly-version').value = '1';
+  document.getElementById('poly-on-unresolved').value = 'propose';
+  document.getElementById('poly-confirm').value = 'true';
+  document.getElementById('results-policy-builder').innerHTML = '';
+  document.getElementById('empty-policy-builder').classList.remove('hidden');
+  setReadoutState('policy-builder','Idle');
+  showErr('policy-builder',''); showNotice('policy-builder','');
+  liveStatus('Policy Builder reset.');
+  refresh();
+};
 
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 

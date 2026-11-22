@@ -1,4 +1,4 @@
-"""Sheet Solution — sheets package.
+"""Assay — sheets package.
 
 The product-specific layer: the plain-English check template, the two
 personas (auditor / verifier), embedded-image extraction, and the

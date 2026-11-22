@@ -1,4 +1,4 @@
-"""Sheet Solution — two-sheet comparison.
+"""Assay — two-sheet comparison.
 
 Deterministic row-level comparison of two sheets that should agree (or of a
 baseline vs. a new run). This is the "some of my people have two sheets and

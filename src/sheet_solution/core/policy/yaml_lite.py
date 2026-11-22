@@ -5,7 +5,8 @@ PyYAML is not pinned, so instead of adding an unpinned runtime dependency we
 parse the *subset* of YAML our policy files need:
 
 * block mappings (``key: value``) and block sequences (``- value``),
-* flow sequences ``[a, b]`` and flow mappings ``{k: v}``,
+* flow sequences ``[a, b]`` and flow mappings ``{k: v}``, including flow
+  collections that span several physical lines,
 * scalars: quoted strings, integers, floats, booleans, ``null``,
 * ``#`` comments on their own line or trailing a value.
 
@@ -40,8 +41,13 @@ def loads(text: str) -> Any:
 
 
 def _tokenise(text: str) -> list[tuple[int, str, int]]:
+    lines = text.splitlines()
     rows: list[tuple[int, str, int]] = []
-    for lineno, raw in enumerate(text.splitlines(), start=1):
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
+        lineno = i + 1
+        i += 1
         if "\t" in raw[: len(raw) - len(raw.lstrip())]:
             raise ConfigError(f"yaml_lite: tabs are not allowed for indentation (line {lineno})")
         stripped = raw.strip()
@@ -53,9 +59,54 @@ def _tokenise(text: str) -> list[tuple[int, str, int]]:
         content = _strip_comment(raw[indent:])
         if not content:
             continue
+        # A flow collection may legally span several physical lines
+        # (e.g. `command: ["run",` / `"--out", "/out"]`). Join it into one
+        # logical row before parsing; the block grammar itself stays line-based.
+        content, i = _join_flow(content, lines, i, lineno)
         _reject_dangerous(content, lineno)
         rows.append((indent, content, lineno))
     return rows
+
+
+def _flow_state(text: str) -> tuple[int, bool]:
+    """Return (bracket depth, open-quote) for a flow fragment, quote-aware."""
+    quote: str | None = None
+    depth = 0
+    for ch in text:
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in ("'", '"'):
+            quote = ch
+        elif ch in ("[", "{"):
+            depth += 1
+        elif ch in ("]", "}"):
+            depth -= 1
+    return depth, quote is not None
+
+
+def _join_flow(content: str, lines: list[str], index: int,
+               lineno: int) -> tuple[str, int]:
+    """Join continuation lines while a flow collection is still open."""
+    depth, open_quote = _flow_state(content)
+    if depth <= 0 and not open_quote:
+        return content, index
+    parts = [content]
+    while index < len(lines) and (depth > 0 or open_quote):
+        raw = lines[index]
+        index += 1
+        if "\t" in raw[: len(raw) - len(raw.lstrip())]:
+            raise ConfigError(
+                f"yaml_lite: tabs are not allowed for indentation (line {index})")
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts.append(_strip_comment(stripped))
+        depth, open_quote = _flow_state(" ".join(parts))
+    if depth != 0 or open_quote:
+        raise ConfigError(
+            f"yaml_lite: unterminated flow value at line {lineno}: {content!r}")
+    return " ".join(parts), index
 
 
 def _strip_comment(text: str) -> str:

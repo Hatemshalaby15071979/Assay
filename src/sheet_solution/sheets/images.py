@@ -1,4 +1,4 @@
-"""Sheet Solution — embedded-image extraction (xlsx).
+"""Assay — embedded-image extraction (xlsx).
 
 When a check is marked for human review and the sheet cell references an
 image (passport photo, etc.), the tool extracts the embedded image so the

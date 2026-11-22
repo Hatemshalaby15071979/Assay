@@ -1,4 +1,4 @@
-"""Sheet Solution — new-engine tests: template, runner, report, images.
+"""Assay — new-engine tests: template, runner, report, images.
 
 These guard the NEW sheet-comparison layer. The inherited spine tests in
 tests/test_*.py (the signoff-derived suite) guard the reused engine.
@@ -59,6 +59,56 @@ def test_template_refuses_bad_machine_flag(tmp_path):
 def test_template_verifier_persona():
     config = template.parse_template(Path("tests/fixtures/check-template-verifier.txt"), "s.xlsx")
     assert config.persona == "verifier"
+
+
+def test_template_skips_blank_placeholder_block(tmp_path):
+    """A trailing [CHECK] skeleton with every field empty is a placeholder,
+    not a check: it must not abort a template that has real checks."""
+    p = tmp_path / "t.txt"
+    p.write_text(
+        "[CHECK]\ncheck_id = X-1\nwhat_is_this_check_for = a\nwhat_to_look_at = b\n"
+        "expected_value_or_rule = no blank\nwhen_it_fails_say = c\n"
+        "machine_can_check = yes\n"
+        "[CHECK]\ncheck_id =\nwhat_is_this_check_for =\nwhat_to_look_at =\n"
+        "expected_value_or_rule =\nwhen_it_fails_say =\nmachine_can_check =\n")
+    config = template.parse_template(p, "s.xlsx")
+    assert [c.check_id for c in config.checks] == ["X-1"]
+
+
+def test_template_refuses_when_every_block_is_blank(tmp_path):
+    p = tmp_path / "blank.txt"
+    p.write_text(
+        "[CHECK]\ncheck_id =\nwhat_is_this_check_for =\nwhat_to_look_at =\n"
+        "expected_value_or_rule =\nwhen_it_fails_say =\nmachine_can_check =\n")
+    with pytest.raises(ConfigError, match=r"no \[CHECK\] blocks with content"):
+        template.parse_template(p, "s.xlsx")
+
+
+def test_template_error_identifies_partial_block(tmp_path):
+    p = tmp_path / "partial.txt"
+    p.write_text(
+        "[CHECK]\ncheck_id = X-1\nwhat_is_this_check_for = a\nwhat_to_look_at = b\n"
+        "expected_value_or_rule = no blank\nwhen_it_fails_say = c\n"
+        "machine_can_check = yes\n"
+        "[CHECK]\ncheck_id = X-2\nwhat_is_this_check_for = a\n")
+    with pytest.raises(ConfigError, match="check block #2") as exc:
+        template.parse_template(p, "s.xlsx")
+    assert "what_to_look_at" in str(exc.value)
+
+
+def test_rows_to_template_skips_blank_rows():
+    from sheet_solution.gui.main import _rows_to_template_text
+
+    rows = [
+        {"check_id": "X-1", "what_is_this_check_for": "a", "what_to_look_at": "b",
+         "expected_value_or_rule": "no blank", "when_it_fails_say": "c",
+         "machine_can_check": "yes"},
+        {"check_id": "", "what_is_this_check_for": "", "what_to_look_at": "",
+         "expected_value_or_rule": "", "when_it_fails_say": "", "machine_can_check": ""},
+    ]
+    text = _rows_to_template_text(rows, "auditor")
+    assert text.count("\n[CHECK]\n") == 1
+    assert "check_id = X-1" in text
 
 
 # ---------------------------------------------------------------------------

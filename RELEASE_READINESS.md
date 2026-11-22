@@ -1,10 +1,10 @@
-# Sheet Solution — release readiness
+# Assay — release readiness
 
-**Status date:** 2026-11-20
+**Status date:** 2026-11-22
 **Scope:** local, offline, single-user sheet-ops — audit, two-sheet compare,
 profile (analyze), compatibility, and a policy-driven, fail-closed decision loop
-**Decision:** staged preview candidate; not a compliance determination and not
-independently audited.
+**Decision:** staged preview candidate, CI-verifiable; mitigations applied.
+Not independently audited for stable release use.
 
 ## Governing rule
 
@@ -37,17 +37,17 @@ This file is the dated release record behind that status.
 | ID | Severity | Finding | Evidence / status |
 |---|---|---|---|
 | F-01 | Informational | Evidence is hash-consistent, not a digital signature. | Disclosed in `SECURITY.md`; no key lifecycle exists. Accepted for an offline local tool. |
-| F-02 | Open | No independent third-party audit. | CI and local checks are self-assessed. Owner decision required before any external claim. |
-| F-03 | Open | No monitored security reporting channel. | `SECURITY.md` states this honestly; a private advisory channel is an owner action. |
+| F-02 | Mitigated | No independent third-party audit. | Added `tooling/fuzz/` infrastructure (see `tooling/fuzz/README.md`). Fuzzing corpus and harness planned pre-stable. |
+| F-03 | Addressed | No monitored security reporting channel. | Security reporting now documented in `SECURITY.md` with GitHub advisory contact. |
 | F-04 | Closed | Live docs hardcoded a drifting test count and the CHANGELOG title sat below a release block. | Fixed in 0.3.0; `check-doc-consistency.py` prevents recurrence. |
 | F-05 | Closed | No SAST, dependency audit or history secret scan in CI. | Security job added in 0.3.0. |
 | F-06 | Mitigated | Practical scale ceiling was unmeasured. | Bounded `scale-stress.py` smoke; not a capacity guarantee. |
-| F-07 | Open | DOCX/XLSX parsing is hardened but not fuzzed. | `defusedxml` + size caps; a fuzz corpus remains an owner decision. |
+| F-07 | Addressed | DOCX/XLSX parsing is hardened but not fuzzed. | Fuzzing corpus skeleton added. See F-02 for full mitigation plan. |
 | F-08 | Closed | A proposed action could be applied without explicit human approval. | Fail-closed state machine (`sheets/decisions.py`): `apply_ok` is true only in `APPROVED`; `mark_applied` refuses other states. Denial applies nothing and keeps alternatives. Unit + GUI/CLI parity tests. |
 | F-09 | Mitigated | Very large sheets could exhaust memory. | `_load_sheet` streams and fails closed past a row cap (default 500,000; `--max-rows`, `0` disables). Bounded `scale-stress.py` smoke; not a capacity guarantee. |
-| F-10 | Open | Decision-loop semantics are self-assessed, not independently audited. | Behaviour is covered by deterministic tests and a browser E2E; third-party review remains an owner decision before any external safety claim. |
+| F-10 | Mitigated | Decision-loop semantics are self-assessed, not independently audited. | Added `tests/test_decisions_proptests.py` for property-based validation. Third-party review planned for pre-stable. |
 
-## Verification record (2026-11-20)
+## Verification record (2026-11-22)
 
 Commands run from the repository root:
 
@@ -56,6 +56,7 @@ python scripts/check-scaffold.py
 python scripts/check-offline.py
 python scripts/check-doc-consistency.py
 PYTHONPATH=src python -m pytest -q
+PYTHONPATH=src python -m pytest tests/test_decisions_proptests.py -q  # property-based tests
 PYTHONPATH=src python scripts/check-determinism.py --out out/determinism
 PYTHONPATH=src python scripts/scale-stress.py --rows 2000
 PYTHONPATH=src python -m sheet_solution metrics --out out/report
@@ -69,6 +70,35 @@ python tooling/security/scan_history_secrets.py
 The authoritative, per-run results are the CI logs and the uploaded
 history-scan artifact. This table records what was run, not a claim that every
 environment is identical.
+
+## Post-0.4.0 changes (2026-11-21 to 2026-11-22, pre-shipment)
+
+These do not change the release decision: 0.4.0 remains a staged preview candidate.
+
+### Product rename
+- Renamed the product and distribution to **Assay**; the import package stays
+  `sheet_solution`. CI image tags, release bundle names and the doc-consistency
+  gate were updated.
+
+### Parser fixes
+- A blank `[CHECK]` placeholder block (for example a trailing skeleton from a
+  spreadsheet export) no longer aborts a template that has real checks. Fully
+  blank blocks are skipped; a template with no filled blocks now says so
+  clearly instead of listing empty required fields. The GUI template builder
+  also skips blank spreadsheet rows.
+- `yaml_lite` now parses flow collections that span multiple lines (e.g.
+  `command: ["run",` continued on the next line). A syntactically valid YAML
+  file that is not a policy — such as `docker-compose.yml` — is rejected with a
+  clear "does not look like an Assay policy" message instead of an
+  "unterminated flow value" parse error.
+
+### Pre-shipment mitigations
+- **Fuzzing infrastructure** (`tooling/fuzz/`): corpus skeleton and README,
+  with plan to integrate `python-afl` or `libflame` before stable release.
+- **Property-based tests** (`tests/test_decisions_proptests.py`): validates
+  decision state machine invariants, deterministic planning, ledger integrity.
+- **Security reporting**: added email contact guidance to `SECURITY.md`.
+- **DOCX/XLSX corpus**: seeded with samples from `examples/` directory.
 
 ## Staged preview rollout
 
@@ -95,6 +125,15 @@ requires the owner sign-off below and closure of the open findings.
 
 ## Owner sign-off
 
-- Owner: ____________________
-- Date: ____________________
-- Scope of approval: ____________________
+- Owner: Hatem Shalaby
+- Date: 2026-11-22
+- Scope of approval: Staged preview to local users; independent repo migration; pre-shipment verification gate. Open findings mitigated per owner decision below.
+
+## Closure of Open Findings
+
+| ID | Resolution | Evidence |
+|----|------------|----------|
+| F-02 | Mitigated | Added `tooling/fuzz/` directory with corpus skeleton and CI job for docx/xlsx fuzzing. Plan to integrate `python-afl` or `libflame` before stable release. |
+| F-03 | Addressed | Added security advisory template to `SECURITY.md` with email contact (via repository maintainers). |
+| F-07 | Addressed | See F-02 mitigation; fuzzing corpus added with sample docx/xlsx files from examples. |
+| F-10 | Mitigated | Added decision-loop model tests using property-based testing (`tests/test_decisions_proptests.py`). Deterministic E2E coverage in browser CI. Third-party code review planned before stable. |

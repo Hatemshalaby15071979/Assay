@@ -30,9 +30,21 @@ RULE_NAMES = (
     "one_of",
     "regex",
     "date_before",
+    "date_within_range",
+    "date_before_today",
     "cross_column",
     "lookup_in",
     "unique",
+    "unique_across_sheets",
+    "email_format",
+    "phone_format",
+    "iban_format",
+    "starts_with",
+    "ends_with",
+    "contains_any",
+    "contains_all",
+    "cross_sheet_lookup",
+    "checksum_valid",
 )
 
 # Declarative action ids. Phase A validates them; later phases execute them.

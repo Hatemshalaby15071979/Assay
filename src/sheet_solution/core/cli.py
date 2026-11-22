@@ -192,7 +192,7 @@ def cmd_verify_pack(args) -> int:
 
 def _fixtures_root() -> Path:
     here = Path(__file__).resolve()
-    # This is the rebranded Sheet Solution package: fixtures live at the repo
+    # This is the rebranded Assay package: fixtures live at the repo
     # root's tests/fixtures/. Walk up until we find that layout.
     for parent in here.parents:
         if (parent / "tests" / "fixtures" / "mapping-table.demo.csv").exists():

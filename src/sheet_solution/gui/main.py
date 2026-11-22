@@ -1,4 +1,4 @@
-"""Sheet Solution — offline GUI: drag-and-drop + visual result cards.
+"""Assay — offline GUI: drag-and-drop + visual result cards.
 
 A single-page local app. The user drags in:
   - one sheet + one check-template  ->  "Run checks"  (the audit persona), or
@@ -13,7 +13,7 @@ extracted images) is downloadable. Everything is on 127.0.0.1; no outbound
 calls; the engine is the same deterministic code the CLI runs.
 
 Launch:  python gui/main.py            # -> http://127.0.0.1:8477
-Requires the optional `gui` extra:  pip install "sheet-solution[gui]"
+Requires the optional `gui` extra:  pip install "assay[gui]"
 """
 from __future__ import annotations
 
@@ -24,9 +24,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Repo root: src/sheet_solution/gui/main.py -> parents[3] = repo root.
+# Repo root: gui/main.py -> sheet_solution -> src -> repo_root (parents[3]).
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "src"))
+# Ensure src/ is on sys.path for direct script execution; -m installation
+# handles this automatically via package metadata.
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
 
 # Files the GUI is allowed to read/upload (kept in a local spool, never the
 # whole filesystem).
@@ -50,6 +53,80 @@ def _load_rows(path: Path) -> list[dict]:
     from sheet_solution.cli import _load_sheet
     rows, _, _ = _load_sheet(path)
     return rows
+
+
+def _load_sheet(path: Path) -> tuple[list[dict], int, dict]:
+    """Load a CSV or XLSX sheet, returning rows, column count, and metadata."""
+    from sheet_solution.cli import _load_sheet as cli_load
+    return cli_load(path)
+
+
+def _parse_template_text(text: str, persona: str) -> "template.CheckConfig":
+    """Parse template text into a CheckConfig using the template module.
+
+    The parse_template function requires a Path, so we write the text to a
+    temporary file and parse from there.
+    """
+    import tempfile
+    from sheet_solution.sheets import template as template_module
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False,
+                                      encoding="utf-8") as f:
+        f.write(text)
+        temp_path = Path(f.name)
+    try:
+        return template_module.parse_template(temp_path, "")
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def _rows_to_template_text(rows: list[dict], persona: str) -> str:
+    """Convert a list of check-def rows into plain-English template text.
+
+    Each row must have at minimum the core check fields. Optional fields
+    are included if present and non-empty. The output is a valid template
+    that passes the template parser.
+    """
+    if not rows:
+        return f"# {persona.upper()}-template (empty)\n"
+
+    lines: list[str] = []
+    intro = ("# Assay — daily-sheet audit template (plain English, no YAML).\n"
+             f"# Persona: {persona} (checks the sheet against a compliance standard)\n"
+             "# One [CHECK] block per thing you look for. Fill every field.\n")
+    lines.append(intro)
+
+    for row in rows:
+        # Spreadsheet exports often carry trailing or spacer rows. A row with
+        # no values at all is not a check definition — skip it rather than
+        # emitting a blank [CHECK] block that fails validation downstream.
+        if not any(str(value or "").strip() for value in row.values()):
+            continue
+        lines.append("")
+        lines.append("[CHECK]")
+        # Core fields
+        lines.append(f"check_id = {row.get('check_id', '')}")
+        lines.append(f"what_is_this_check_for = {row.get('what_is_this_check_for', '')}")
+        lines.append(f"what_to_look_at = {row.get('what_to_look_at', '')}")
+        lines.append(f"expected_value_or_rule = {row.get('expected_value_or_rule', '')}")
+        lines.append(f"when_it_fails_say = {row.get('when_it_fails_say', '')}")
+        machine = row.get('machine_can_check', '')
+        lines.append(f"machine_can_check = {machine}")
+        # Optional fields - only include if present and non-empty
+        if row.get('column_name'):
+            lines.append(f"column_name = {row.get('column_name')}")
+        if row.get('row_key_column'):
+            lines.append(f"row_key_column = {row.get('row_key_column')}")
+        if row.get('human_review_note'):
+            lines.append(f"human_review_note = {row.get('human_review_note')}")
+        if row.get('example_that_passes'):
+            lines.append(f"example_that_passes = {row.get('example_that_passes')}")
+        if row.get('example_that_fails'):
+            lines.append(f"example_that_fails = {row.get('example_that_fails')}")
+        if row.get('tolerance'):
+            lines.append(f"tolerance = {row.get('tolerance')}")
+
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +276,101 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
                              "a_value": r.a_value, "b_value": r.b_value}
                             for r in result.rows], "out": str(out)})
 
+    # --- builders: turn an uploaded sheet / policy into a usable artifact ---
+    @app.post("/api/template-builder")
+    def template_builder():
+        """Build a plain-English check-template from a sheet of check definitions.
+
+        The uploaded sheet is a CSV/XLSX whose header row names the template
+        fields verbatim (check_id, what_is_this_check_for, what_to_look_at,
+        expected_value_or_rule, when_it_fails_say, machine_can_check, plus the
+        optional column_name / row_key_column / human_review_note /
+        example_that_passes / example_that_fails / tolerance). Each data row
+        becomes one [CHECK] block; the result is validated by the same engine
+        the run-checks flow uses, so an invalid template fails closed here.
+        """
+        from sheet_solution.sheets import template as template_mod
+
+        body = request.get_json(force=True)
+        sheet_id = body.get("sheet") or ""
+        persona = str(body.get("persona") or "auditor").strip().lower()
+        if persona not in ("auditor", "verifier"):
+            return jsonify({"ok": False,
+                            "error": f"unknown persona {persona!r}; expected auditor or verifier"}), 400
+        try:
+            sheet_path = _spool_file(sheet_id)
+        except (ValueError, FileNotFoundError, OSError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        try:
+            rows, _, _ = _load_sheet(sheet_path)
+            text = _rows_to_template_text(rows, persona)
+            config = _parse_template_text(text, persona)
+        except Exception as exc:  # noqa: BLE001 - fail closed, surface the reason
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        content = text.encode("utf-8")
+        spool = _new_spool_for(content)
+        (spool / "template.txt").write_bytes(content)
+        return jsonify({
+            "ok": True, "id": spool.name, "name": "template.txt",
+            "persona": config.persona,
+            "checks": [
+                {"id": c.check_id, "label": c.what_is_this_check_for,
+                 "rule": c.expected_value_or_rule,
+                 "description": c.what_to_look_at,
+                 "machine": c.machine_can_check, "needs_human": c.needs_human}
+                for c in config.checks],
+        })
+
+    @app.post("/api/policy-builder")
+    def policy_builder():
+        """Validate an uploaded policy and emit the normalised policy JSON.
+
+        The uploaded config may be .json / .yaml / .yml / .csv / .xlsx. The
+        form fields (version, on_unresolved, confirm_required) override the
+        file's defaults, and the result is validated by the same gate the CLI
+        uses -- an unknown rule, action or malformed check fails closed here.
+        """
+        from sheet_solution.core.policy import load_policy, validate_policy
+
+        body = request.get_json(force=True)
+        config_id = body.get("config") or ""
+        version = str(body.get("version") or "1").strip()
+        on_unresolved = str(body.get("on_unresolved") or "propose").strip()
+        confirm = body.get("confirm_required")
+        try:
+            version_int = int(version)
+        except ValueError:
+            return jsonify({"ok": False,
+                            "error": f"invalid version {version!r}; expected an integer"}), 400
+        if on_unresolved not in ("propose", "flag", "block"):
+            return jsonify({"ok": False,
+                            "error": f"unknown on_unresolved {on_unresolved!r}"}), 400
+        if not isinstance(confirm, bool):
+            confirm = str(confirm).strip().lower() == "true"
+        try:
+            config_path = _spool_file(config_id)
+        except (ValueError, FileNotFoundError, OSError) as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        try:
+            raw = load_policy(config_path)
+            raw["version"] = version_int
+            defaults = raw.setdefault("defaults", {})
+            defaults["on_unresolved"] = on_unresolved
+            defaults["confirm_required"] = confirm
+            policy = validate_policy(raw)
+        except Exception as exc:  # noqa: BLE001 - fail closed, surface the reason
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        out_raw = policy.to_raw()
+        content = json.dumps(out_raw, indent=2).encode("utf-8")
+        spool = _new_spool_for(content)
+        (spool / "policy.json").write_bytes(content)
+        return jsonify({
+            "ok": True, "id": spool.name, "name": "policy.json",
+            "version": policy.version,
+            "checks": [{"id": c.id, "column": c.column, "rule": c.rule}
+                       for c in policy.checks],
+        })
+
     # --- decision loop (fail closed; reuses the CLI engine) --------------
     @app.post("/api/decisions/plan")
     def decisions_plan():
@@ -266,6 +438,37 @@ def build_app():  # pragma: no cover - thin web shell; logic is in the engine
         return jsonify({"ok": True, "out": str(out),
                         "decisions": _read_decisions(out),
                         "events": ledger.decision_events()})
+
+    @app.get("/api/file")
+    def get_file():
+        """Download a generated file from a spool directory.
+
+        Used by the template-builder and policy-builder to let the user
+        download the generated template.txt or policy.json file.
+        """
+        from flask import send_file
+
+        spool_id = request.args.get("spool", "")
+        filename = request.args.get("name", "")
+        if not spool_id or not filename:
+            return jsonify({"ok": False, "error": "spool and name required"}), 400
+        try:
+            spool_dir = SPOOL / spool_id
+            if not spool_dir.is_dir():
+                return jsonify({"ok": False, "error": "spool not found"}), 404
+            # Security: filename must be just a basename, no path components
+            if "/" in filename or "\\" in filename or filename in (".", ".."):
+                return jsonify({"ok": False, "error": "invalid filename"}), 400
+            filepath = spool_dir / filename
+            if not filepath.exists() or not filepath.is_file():
+                return jsonify({"ok": False, "error": "file not found"}), 404
+            # Ensure the resolved path is still within the spool (no traversal)
+            if filepath.resolve().parent != spool_dir.resolve():
+                return jsonify({"ok": False, "error": "invalid path"}), 400
+            return send_file(str(filepath), as_attachment=True,
+                            download_name=filename)
+        except Exception as exc:  # noqa: BLE001
+            return jsonify({"ok": False, "error": str(exc)}), 500
 
     @app.get("/api/pack")
     def download_pack():
@@ -369,7 +572,7 @@ def main() -> int:  # pragma: no cover
     args = parser.parse_args()
     SPOOL.mkdir(parents=True, exist_ok=True)
     app = build_app()
-    print(f"Sheet Solution offline GUI on http://{args.host}:{args.port} "
+    print(f"Assay offline GUI on http://{args.host}:{args.port} "
           f"(local only — no cloud)")
     app.run(host=args.host, port=args.port)
     return 0

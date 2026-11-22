@@ -1,4 +1,4 @@
-"""Sheet Solution — offline, deterministic, auditable sheet-audit platform.
+"""Assay — offline, deterministic, auditable sheet-audit platform.
 
 Rebranded from the Signoff 0.1.0 spine (see PROVENANCE.md). Runs on any
 hardware, fully offline: no network, no cloud, no AI model in the check

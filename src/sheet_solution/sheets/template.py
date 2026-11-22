@@ -1,4 +1,4 @@
-"""Sheet Solution — check-template config engine.
+"""Assay — check-template config engine.
 
 Users (non-technical) fill a plain-English template. This module turns
 that template into a structured, validated CheckConfig and REFUSES to
@@ -124,6 +124,11 @@ def _parse_kv(block: str) -> dict[str, str]:
     return kv
 
 
+def _has_any_value(kv: dict[str, str]) -> bool:
+    """True when at least one field has content (a blank skeleton has none)."""
+    return any(value.strip() for value in kv.values())
+
+
 def parse_template(path: Path, sheet_path: str) -> CheckConfig:
     """Read the plain-English template and return a validated CheckConfig."""
     text = Path(path).read_text(encoding="utf-8-sig")
@@ -135,14 +140,23 @@ def parse_template(path: Path, sheet_path: str) -> CheckConfig:
 
     checks: list[Check] = []
     seen_ids: set[str] = set()
-    for block in blocks:
+    for index, block in enumerate(blocks, start=1):
         kv = _parse_kv(block)
+        if not _has_any_value(kv):
+            # A [CHECK] skeleton with every field left blank is a placeholder,
+            # not a check: it carries no intent, so skip it instead of failing.
+            continue
         missing = [f for f in REQUIRED_FIELDS if not kv.get(f, "").strip()]
         if missing:
+            first_filled = next(
+                (f"{k} = {v}" for k, v in kv.items() if v.strip()),
+                "an empty [CHECK] block",
+            )
             raise ConfigError(
-                f"check block starting at {block.strip()[:40]!r}... is missing "
+                f"check block #{index} ({first_filled[:60]!r}...) is missing "
                 f"required field(s): {', '.join(missing)}. Every field in the "
-                "template is required — fill each one in plain English.")
+                "template is required — fill each one in plain English, or "
+                "delete the empty [CHECK] block.")
         check_id = kv["check_id"].strip()
         if check_id in seen_ids:
             raise ConfigError(f"duplicate check_id {check_id!r} — each check needs a unique id")
@@ -166,6 +180,12 @@ def parse_template(path: Path, sheet_path: str) -> CheckConfig:
             row_key_column=kv.get("row_key_column", "").strip(),
             human_review_note=kv.get("human_review_note", "").strip(),
         ))
+
+    if not checks:
+        raise ConfigError(
+            "no [CHECK] blocks with content found in the template — every "
+            "block is blank. Fill in at least one [CHECK] section, or delete "
+            "the empty placeholder blocks.")
 
     persona = _infer_persona(checks)
     return CheckConfig(persona=persona, sheet_path=sheet_path, checks=checks)

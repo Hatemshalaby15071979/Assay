@@ -1,4 +1,4 @@
-# Sheet Solution — GUI regression test (REAL browser DOM drag-and-drop).
+# Assay — GUI regression test (REAL browser DOM drag-and-drop).
 #
 # Guards the bug where the Compare button stayed disabled after dropping two
 # sheets. Drives the real GUI in a real browser: switches to the Compare tab,

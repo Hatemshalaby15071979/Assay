@@ -1,1 +1,1 @@
-"""Sheet Solution — GUI package (offline drag-and-drop + visual cards)."""
+"""Assay — GUI package (offline drag-and-drop + visual cards)."""

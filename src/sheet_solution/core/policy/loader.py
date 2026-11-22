@@ -58,6 +58,14 @@ def _load_yaml(p: Path) -> dict:
         raise ConfigError(f"cannot read policy YAML {p.name}: {exc}") from exc
     if not isinstance(data, dict):
         raise ConfigError(f"policy YAML {p.name} must be a mapping at the top level")
+    # A syntactically valid YAML file that is not a policy (a compose file,
+    # a CI workflow, ...) should say so instead of failing on an unknown key.
+    if data and not (set(data) & {"version", "defaults", "checks", "compatibility"}):
+        raise ConfigError(
+            f"{p.name} does not look like an Assay policy: expected top-level "
+            "'version', 'defaults', 'checks' or 'compatibility' "
+            f"(found: {', '.join(sorted(data))}). If this is a docker-compose "
+            "file, pass your policy file instead.")
     return data
 
 

@@ -1,4 +1,4 @@
-# Sheet Solution — Security
+# Assay — Security
 
 ## The security posture in one line
 
@@ -16,7 +16,7 @@ construction, not by policy.
 | CSV formula injection | Report artifacts are written with the field-quoter that neutralises leading `=`/`+`/`-`/`@`/tab characters, so a cell containing `=CMD()` can't become a spreadsheet macro when the report is opened. |
 | Partial / tampered report | Each report pack is hash-chained (SHA-256 over canonical JSON); `verify` replays the chain and flags any artifact whose digest no longer matches. |
 | Supply chain | Runtime dependencies are pinned with SHA-256 hashes in `requirements.lock`; the Docker build installs them `--no-index` from a locally verified wheel set. Base image is digest-pinned. |
-| Runaway / arbitrary code | No shell, no `eval`, no user-controlled code paths. The GUI binds `127.0.0.1` only and makes no outbound calls. |
+| Runaway / arbitrary code | No shell, no `eval`, no user-controlled code paths. The GUI binds `127.0.0.1` only and makes no outbound calls. The rules engine uses a fixed registry of named actions; policy files contain only data, never code. |
 
 ## Non-goals (honest)
 
@@ -30,9 +30,19 @@ construction, not by policy.
 - It is not a compliance certification. It automates a manual inspection
   and produces an auditable log of that inspection.
 
-## Reporting
+## Reporting Security Issues
 
-There is no monitored security mailbox yet. If you have repository access,
-open a private security advisory; otherwise do not send personal data in a
-report. This is stated honestly rather than inventing a channel. The open
-reporting item is tracked in [`RELEASE_READINESS.md`](RELEASE_READINESS.md).
+**Pre-stable release (preview):** If you have repository access, open a private
+security advisory through GitHub's security tab. For users without repository
+access, contact the maintainer through the repository issues page (security
+labeled) or email through the project's GitHub profile.
+
+**After stable release:** Security issues will be tracked through GitHub
+Security Advisories. The project maintainer will respond within 7 business days.
+
+**Before reporting:** Please search existing security advisories first. Note that
+this is not a cryptographic signing tool and does not authenticate source data
+(authenticity is not a feature). See "Non-goals" above.
+
+The reporting channel was added as part of the pre-shipment preparation for
+v0.4.0 staged preview.

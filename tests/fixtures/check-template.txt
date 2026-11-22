@@ -1,4 +1,4 @@
-# Sheet Solution — daily-sheet audit template (plain English, no YAML).
+# Assay — daily-sheet audit template (plain English, no YAML).
 
 # Persona: auditor (checks the sheet against a compliance standard)
 # One [CHECK] block per thing you look for. Fill every field.

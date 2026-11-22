@@ -78,7 +78,7 @@ class Metrics:
         d = self.to_dict()
         c, f = d["checks"], d["findings"]
         return "\n".join([
-            "Sheet Solution — metrics",
+            "Assay — metrics",
             f"checks evaluated: {c['total']}",
             f"  pass: {c['pass']}  fail: {c['fail']}  human-review: {c['pending_human']}",
             f"  machine-decided: {c['machine_decided']}/{c['total']} "
