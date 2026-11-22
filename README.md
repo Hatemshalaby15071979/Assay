@@ -2,7 +2,7 @@
 
 # Assay
 
-<img src="assets/helix-logo.png" alt="Helix Solutions logo" width="48" height="48" style="vertical-align:middle;margin-right:0.5rem">
+<img src="assets/helix-solutions-logo.svg" alt="Helix Solutions" width="48" height="48" style="vertical-align:middle;margin-right:0.5rem">
 
 ![licence](https://img.shields.io/badge/licence-MIT-blue)
 ![offline](https://img.shields.io/badge/offline-by-construction-blue)

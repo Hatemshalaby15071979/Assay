@@ -39,6 +39,11 @@ dev = [
 [project.scripts]
 assay = "sheet_solution.cli:main"
 
+[project.urls]
+Homepage = "https://github.com/Hatemshalaby15071979/Assay"
+Repository = "https://github.com/Hatemshalaby15071979/Assay"
+Issues = "https://github.com/Hatemshalaby15071979/Assay/issues"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

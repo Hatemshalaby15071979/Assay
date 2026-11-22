@@ -86,12 +86,17 @@ Scope of approval: Staged preview to local users; independent repo migration; pr
 - [x] Add **property-based tests** (mitigates F-10)
 - [x] Update **finding register** with resolved status
 
-### Pending Actions (for independent repo owner)
-- [ ] Create new GitHub repository with preferred name (e.g., `assay-framework`, `sheet-ops-assay`)
-- [ ] Update `pyproject.toml` URLs if referencing old repo
-- [ ] Push this branch to the new repository
-- [ ] Configure GitHub Container Registry secrets (if using ghcr.io)
-- [ ] Transfer any existing issues/PRs if migrating from old repo
+### Independent Repo Migration — verified 2026-11-22 (local readiness audit)
+- [x] GitHub repository exists: `Hatemshalaby15071979/Assay` (public; remote `assay` in this checkout)
+- [x] `pyproject.toml` now declares `Homepage`, `Repository` and `Issues` URLs for that repository
+- [x] README and repo README agree on version 0.4.0 and the staged-preview status
+- [x] Canonical Helix Solutions master logo applied to the README and HTML surfaces (local)
+- [ ] Owner to confirm the `assay` remote is the intended publication target before pushing
+- [ ] Optional: configure GHCR secrets only if a container registry is actually used
+- [ ] No old-repo issues/PRs were transferred — none exist in this checkout
+
+**Local-only note:** the audit above is a local readiness check. Nothing was pushed, tagged or
+published in this session, per the owner's instruction.
 
 ---
 
