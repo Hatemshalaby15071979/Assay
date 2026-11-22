@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Helix Solutions logo for Assay - Animated with scanline effects -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="32" height="32">
+  <defs>
+    <linearGradient id="grad-helix" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7cffb2;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#5ce1ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffb347;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow-helix">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M0 0L4 0M0 4L4 4M0 8L4 8M4 0L4 12M0 12L4 12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <!-- Animated logo container -->
+  <g id="logo-group" filter="url(#glow-helix)">
+    <!-- Main logo shape - stylized H for Helix Solutions -->
+    <path d="M32 48h48l-16 160h16l16-48h32l16 48h16l-16-64h16l16 16h16l-32-96h32l16 48h16l-16-64h64l32 160h-16l-32-96h-32l-16 48h-16l32-96 16 48h48l16-64 16 48h16l-32-96h48l32 160h-16v-16h16l16-48h16l-32 96 16 64h-16l-32-96h-64l-16 48h-16l32-96-16 48h-48l-16 96v-48h16l16-96h16l-32 48 16 48h-16l-32-96-16 48h-48v-48h16l16-48h16l-32 96 16 48h-16l-32-96-16 48h48v-48z"
+          fill="url(#grad-helix)"
+          class="logo-path"/>
+    </g>
+  <!-- Animated scanline overlay -->
+  <g opacity="0.15">
+    <rect x="0" y="0" width="256" height="256" fill="url(#scanlines)"/>
+  </g>
+  <!-- Pulse animation -->
+  <style>
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.02); opacity: 0.85; }
+    }
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(4); }
+    }
+    #logo-group {
+      animation: pulse 3s ease-in-out infinite;
+    }
+    #scanlines {
+      animation: scan 2s linear infinite;
+    }
+  </style>
+</svg>
