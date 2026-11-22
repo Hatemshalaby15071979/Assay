@@ -1,4 +1,4 @@
-# Sheet Solution — developer entry points.
+# Assay — developer entry points.
 # All commands run fully offline once dependencies are installed.
 
 PYTHON ?= python3

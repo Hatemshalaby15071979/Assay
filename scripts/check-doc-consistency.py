@@ -78,9 +78,9 @@ def check_repo(root: Path) -> list[str]:
             )
 
     readme = (root / "README.md").read_text(encoding="utf-8")
-    if f"Sheet Solution {version}" not in readme:
+    if f"Assay {version}" not in readme:
         problems.append(
-            f"README.md does not name version {version} as 'Sheet Solution {version}'"
+            f"README.md does not name version {version} as 'Assay {version}'"
         )
     if STATUS_SOURCE_DECLARATION not in readme:
         problems.append(f"README.md must declare itself the {STATUS_SOURCE_DECLARATION!r}")

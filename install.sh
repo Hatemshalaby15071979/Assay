@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sheet Solution — recipient-side install + run (offline, no cloud).
+# Assay — recipient-side install + run (offline, no cloud).
 #
 # Usage (inside the extracted bundle):
 #   ./install.sh            # build a local venv + install offline

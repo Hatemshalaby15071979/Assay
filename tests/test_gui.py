@@ -1,4 +1,4 @@
-"""Sheet Solution — GUI API tests (offline, no browser, no outbound calls).
+"""Assay — GUI API tests (offline, no browser, no outbound calls).
 
 Drives the Flask app's test client directly. No server socket is opened and
 no request leaves the process — consistent with the offline guarantee.
@@ -92,6 +92,6 @@ def test_compare_requires_key_and_fields(client):
 def test_index_html_served(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert b"Sheet Solution" in r.data
+    assert b"Assay" in r.data
     # The SPA must not make any outbound calls (offline guarantee in the UI too).
     assert b"fetch('/api/" in r.data and b"https://" not in r.data

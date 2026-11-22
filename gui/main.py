@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Sheet Solution GUI — launcher.
+"""Assay GUI — launcher.
 
 Thin entry point so `python gui/main.py` (from the repo root or a bundle)
 opens the offline drag-and-drop + visual-cards app. The real package is
 `sheet_solution.gui`; this file just hands off to it.
 
-    pip install "sheet-solution[gui]"
+    pip install "assay[gui]"
     python -m sheet_solution.gui.main        # or: python gui/main.py
     # -> http://127.0.0.1:8477  (local only, no cloud)
 """

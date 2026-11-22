@@ -2,15 +2,22 @@
 
 Everything here is **synthetic** — no real customer data, no PII.
 
+The commands below use the installed `assay` CLI. From a source checkout
+without installing, use `python -m sheet_solution` instead — it is the same
+entry point.
+
 - `example-sheet.xlsx` — a small daily sheet (applicant rows + an embedded
   passport-style photo). This is what the CI Docker run and `make run` use.
 - `compare-baseline.xlsx` + `compare-new.xlsx` — a two-sheet pair for the
   `compare` command.
 - `policy.example.json`, `policy.example.yaml`, `policy-sheet.example.csv` —
   the same policy in three formats (JSON, restricted YAML, key/value sheet).
-  All normalise to one schema. `parse-policy` echoes what was understood:
+  All normalise to one schema. The YAML subset accepts block mappings and
+  sequences, flow collections (even across lines), quoted strings, numbers,
+  booleans and null; it refuses anchors, tags, merge keys and tabs.
+  `parse-policy` echoes what was understood:
   ```
-  python -m sheet_solution parse-policy --policy examples/policy.example.yaml
+  assay parse-policy --policy examples/policy.example.yaml
   ```
 - `check-template.example.txt` — a filled-in check template covering all
   three check kinds:
@@ -22,12 +29,12 @@ Everything here is **synthetic** — no real customer data, no PII.
 ## Try it in 3 commands
 
 ```bash
-pip install "sheet-solution[xlsx]"
-python -m sheet_solution run \
+pip install "assay[xlsx]"
+assay run \
   --sheet examples/example-sheet.xlsx \
   --template examples/check-template.example.txt \
   --out out/report
-python -m sheet_solution verify --out out/report
+assay verify --out out/report
 ```
 
 You get:
@@ -45,7 +52,7 @@ GUI). Give it a row-key column, the columns to compare, and an optional
 numeric tolerance:
 
 ```bash
-python -m sheet_solution compare \
+assay compare \
   --sheet-a examples/compare-baseline.xlsx \
   --sheet-b examples/compare-new.xlsx \
   --key item_id --fields amount,status \

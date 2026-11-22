@@ -1,4 +1,4 @@
-# Sheet Solution — example check-template.
+# Assay — example check-template.
 #
 # Copy this to your own file and fill each [CHECK] block in plain English.
 # You do NOT need to know YAML or JSON. One [CHECK] = one thing you look for.

@@ -1,4 +1,4 @@
-"""Sheet Solution — two-sheet comparison tests (deterministic + traceable)."""
+"""Assay — two-sheet comparison tests (deterministic + traceable)."""
 from __future__ import annotations
 
 from pathlib import Path

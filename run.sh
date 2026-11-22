@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sheet Solution — one-click local run for non-technical users.
+# Assay — one-click local run for non-technical users.
 # Usage: ./run.sh <sheet.xlsx-or-.csv> <check-template.txt> [out_dir]
 #
 # If you do not have the tool installed, this script installs it into a

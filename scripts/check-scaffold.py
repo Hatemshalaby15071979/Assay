@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scaffold assertion for the Sheet Solution repository.
+"""Scaffold assertion for the Assay repository.
 
 Checks the required tree for a distributable, offline, deterministic
 sheet-audit tool. Unlike the Signoff reference (which carried owner

@@ -1,8 +1,8 @@
-# Sheet Solution — Architecture
+# Assay — Architecture
 
 ## Overview
 
-Sheet Solution is a **deterministic, offline, auditable** sheet-audit
+Assay is a **deterministic, offline, auditable** sheet-audit
 platform. It answers one question: *"given this sheet and the things I was
 told to look for, what passes, what fails, and what needs a human?"*
 
@@ -18,6 +18,17 @@ Two personas, inferred from how you write the checks:
 
 - **auditor** — pass/fail against a standard, with notes.
 - **verifier** — expected values must be present; report the misses.
+
+## Naming
+
+- **Product:** Assay (formerly Sheet Solution).
+- **Distribution / CLI:** `assay` — the installed console script.
+- **Import package:** `sheet_solution` — kept deliberately so
+  `python -m sheet_solution …` and existing scripts keep working. `assay`
+  and `python -m sheet_solution` are the same entry point.
+- **Images / bundles:** Docker tags and release bundles use `assay`.
+
+The doc-consistency gate checks that `README.md` names `Assay {version}`.
 
 ## Layers
 
@@ -131,11 +142,24 @@ drift. Pack paths are confined to the local content-named spool. A browser E2E
 through real DOM drops and asserts zero page errors, complementing the Flask
 API tests in `test_gui_decisions.py`.
 
+## Input parsing (fail closed)
+
+Templates and policies are parsed by small in-repo parsers, not PyYAML.
+The policy YAML subset supports block mappings/sequences, flow collections
+(including ones that span several lines), quoted strings, numbers, booleans
+and null; it refuses anchors, aliases, tags, merge keys, multi-document
+streams and tabs. A syntactically valid YAML file that is not a policy (a
+compose file, a CI workflow) is rejected with a "does not look like an Assay
+policy" message rather than a low-level parse error.
+
 ## Data flow
 
 1. **Input:** sheet (.xlsx/.csv) + plain-English check-template.
 2. **Validate template:** parse into a `CheckConfig`; fail closed on any
-   missing/ambiguous field. Prove the config back to the user.
+   missing/ambiguous field. A `[CHECK]` block with every field blank is a
+   placeholder and is skipped; a partially filled block is refused and the
+   error names the block and the missing fields. Prove the config back to
+   the user.
 3. **Load sheet:** rows into records; detect xlsx for image extraction.
 4. **Run checks:** machine rules -> PASS/FAIL; human checks -> PENDING-HUMAN.
 5. **Extract images:** embedded images pulled to `out/report/media/`.
@@ -144,6 +168,9 @@ API tests in `test_gui_decisions.py`.
 
 ## Versioning
 
+- Unreleased — renamed to Assay (distribution `assay`; import package
+  unchanged); multi-line YAML flow support; blank template placeholders are
+  skipped and non-policy YAML is rejected with a clear message.
 - 0.4.0 — sheet-ops release: versioned policy (one schema, three inputs),
   named rules registry, `analyze` / `compatibility`, fail-closed decision loop
   (CLI + GUI), ops `metrics`, and a bounded-memory row cap. Staged preview.

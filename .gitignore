@@ -20,7 +20,7 @@ OWNER/real-data/
 out/
 .coverage
 
-# Sheet Solution
+# Assay
 out/
 gui/__pycache__/
 .vendor/

@@ -1,6 +1,6 @@
-# Sheet Solution — Provenance
+# Assay — Provenance
 
-Sheet Solution is a **new, independent, deployable** product. It is not a
+Assay (formerly Sheet Solution) is a **new, independent, deployable** product. It is not a
 fork-in-place of the Signoff repository and it does not modify it. This
 document records exactly which parts were **reused** from the Signoff 0.1.0
 spine and which parts are **new**, so the lineage is honest and auditable.
@@ -13,12 +13,12 @@ spine and which parts are **new**, so the lineage is honest and auditable.
   respect to behaviour**: every inherited test in `tests/` (the
   signoff-derived suite) still passes against the copied engine unchanged,
   which is the proof the reuse was faithful.
-- The `signoff/` repository is **never modified**. All Sheet Solution work
+- The `signoff/` repository is **never modified**. All Assay work
   lives in `sheet_solution/`.
 
 ## What was copied 1:1 (the "80% spine")
 
-| Sheet Solution path | Signoff 0.1.0 origin | Change on copy |
+| Assay path | Signoff 0.1.0 origin | Change on copy |
 |---|---|---|
 | `src/sheet_solution/core/model/*` | `src/signoff/model/*` | imports rebranded only |
 | `src/sheet_solution/core/util/*` | `src/signoff/util/*` | imports rebranded only |
@@ -55,7 +55,7 @@ injection neutralisation, atomic writes, non-root Docker.
 
 ## Design decision that shaped this copy
 
-Sheet Solution is **deterministic + human-in-the-loop, with no AI model in
+Assay is **deterministic + human-in-the-loop, with no AI model in
 the check path.** The signoff spine's philosophy — *the machine never
 guesses* — is preserved: every machine check is a verifiable rule, and every
 image/semantic check is flagged `PENDING-HUMAN` and recorded in the audit

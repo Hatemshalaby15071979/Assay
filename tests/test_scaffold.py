@@ -1,4 +1,4 @@
-"""Scaffold + offline-guarantee invariants for the Sheet Solution repo.
+"""Scaffold + offline-guarantee invariants for the Assay repo.
 
 Runs the repo's own checkers as subprocesses — the tests assert the same
 exit codes an operator sees. This repository is a *shipped tool*, so the

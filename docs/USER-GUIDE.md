@@ -1,7 +1,12 @@
-# Sheet Solution — User Guide (plain English)
+# Assay — User Guide (plain English)
 
 This is for the person who receives the sheet, **not** a developer. You do
 not need to know any programming language.
+
+> **Command names.** If you installed the tool, the command is `assay`
+> (`assay run …`). From a source checkout without installing, use
+> `python -m sheet_solution …` — it is the same program. This guide uses
+> `assay`.
 
 ## You have two jobs
 
@@ -27,6 +32,12 @@ column_name = passport_photo             <- which column (spreadsheets only)
 example_that_passes = a row that has a photo
 example_that_fails = a row with no photo
 ```
+
+The first six fields are **required** in every `[CHECK]` block. `column_name`,
+`human_review_note`, `tolerance` and the two `example_*` fields are optional.
+A block with every field left blank is treated as a placeholder and skipped
+(safe to leave a trailing skeleton); a *partially* filled block is refused and
+the error names the block number and the missing fields.
 
 ### The rules you can use for `expected_value_or_rule`
 
@@ -57,11 +68,11 @@ honest: the tool never tells you a photo is "fine" on its own.
 **Or with the CLI:**
 
 ```
-python -m sheet_solution run --sheet your-sheet.xlsx --template your-checks.txt --out out/report
+assay run --sheet your-sheet.xlsx --template your-checks.txt --out out/report
 # (add --key <column> to name which column identifies each row; auto-detected otherwise)
 ```
 
-**Or click through the browser:** `python gui/main.py`, open
+**Or click through the browser:** `./gui.sh`, open
 `http://127.0.0.1:8477`, paste your paths, click **Run checks**.
 
 ## Step 3 — Read the report
@@ -83,7 +94,7 @@ Open `out/report/check-results.csv` (Excel opens it directly):
 ## Proving it later
 
 ```
-python -m sheet_solution verify --out out/report
+assay verify --out out/report
 ```
 
 If anything in the pack was changed after you ran it, this tells you. A clean
@@ -93,8 +104,8 @@ The run also writes `out/report/.audit/ledger.jsonl`, an intent/result chain
 for the run itself:
 
 ```
-python -m sheet_solution ledger --out out/report verify    # chain intact?
-python -m sheet_solution ledger --out out/report pending   # interrupted runs
+assay ledger --out out/report verify    # chain intact?
+assay ledger --out out/report pending   # interrupted runs
 ```
 
 A normal run leaves no pending intents. If the tool was stopped mid-run, the
@@ -113,19 +124,19 @@ After a `run`, from the terminal:
 
 ```
 # 1. see the proposals (written to decisions.json in the run pack)
-python -m sheet_solution decisions plan --out out/report --policy policy.json
-python -m sheet_solution decisions list --out out/report
+assay decisions plan --out out/report --policy policy.json
+assay decisions list --out out/report
 
 # 2. make a decision — every step needs a named person (--actor)
-python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+assay decisions decide --out out/report --finding-id F-... \
   --action decline --actor alice --reason "needs a human"
-python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+assay decisions decide --out out/report --finding-id F-... \
   --action re-propose --actor bob --action-id flag_for_human
-python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+assay decisions decide --out out/report --finding-id F-... \
   --action approve --actor carol
 
 # 3. only now apply it — approving alone changes nothing
-python -m sheet_solution decisions decide --out out/report --finding-id F-... \
+assay decisions decide --out out/report --finding-id F-... \
   --action apply --actor carol
 ```
 
@@ -148,7 +159,7 @@ show the current state, so you can always see what has and has not been done.
 Run:
 
 ```
-python -m sheet_solution metrics --out out/report
+assay metrics --out out/report
 ```
 
 It reads the pack and prints, in plain numbers: how many checks the machine
@@ -174,7 +185,7 @@ green = matched, red = changed, blue = only in A, orange = only in B.
 **From the terminal:**
 
 ```
-python -m sheet_solution compare \
+assay compare \
   --sheet-a baseline.xlsx --sheet-b new.xlsx \
   --key applicant_id --fields amount,status \
   --out out/compare
@@ -190,12 +201,27 @@ exact. It's a count you can defend, not a "looks the same."
 If you don't like the terminal, open the screen:
 
 ```
-pip install "sheet-solution[gui]"
+./gui.sh                              # easiest: uses/creates .venv with the GUI extra
+
+# or, if the tool is already installed:
 python -m sheet_solution.gui.main      # opens http://127.0.0.1:8477
 ```
 
 Drag your files into the boxes, click **Run** / **Compare**, and read the
 cards. Everything happens on this computer.
+
+## If the tool refuses a file
+
+The tool fails closed: if it cannot read a template or policy unambiguously,
+it stops before touching your data. The message names the block or file.
+
+| Message | What it means | What to do |
+|---|---|---|
+| `... missing required field(s): ...` | A `[CHECK]` block is partly filled in. | Fill every required field in that block, or delete the block. |
+| `no [CHECK] blocks with content found` | Every block is blank. | Fill in at least one `[CHECK]` section. |
+| `... does not look like an Assay policy` | A compose/CI file was passed where a policy was expected. | Pass `policy.json`, `policy.yaml`, or a policy sheet instead. |
+| `yaml_lite: ... at line N` | The policy YAML uses something outside the safe subset. | Follow `examples/policy.example.yaml`; the line number points at the problem. |
+| `unsupported policy file type` | The extension is not `.json`, `.yaml`, `.yml`, `.csv` or `.xlsx`. | Export or rename the file in a supported format. |
 
 ## Privacy
 

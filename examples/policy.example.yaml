@@ -1,4 +1,4 @@
-# Sheet Solution — example policy (restricted YAML subset).
+# Assay — example policy (restricted YAML subset).
 # "What may the machine decide, and what must a person confirm?"
 # This file and policy.example.json normalise to the SAME canonical schema.
 version: 1

@@ -1,4 +1,4 @@
-# gitleaks configuration — Sheet Solution
+# gitleaks configuration — Assay
 #
 # Local use only:  gitleaks detect --source . --config .gitleaks.toml
 # CI uses tooling/security/scan_history_secrets.py as the required,

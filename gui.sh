@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sheet Solution — open the drag-and-drop + visual-cards GUI.
+# Assay — open the drag-and-drop + visual-cards GUI.
 #
 #   ./gui.sh              # uses ./.venv if present, else creates it (with [gui])
 #   ./gui.sh --port 9000  # pick a different port

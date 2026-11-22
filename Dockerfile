@@ -1,4 +1,4 @@
-# Sheet Solution Dockerfile — multi-stage, offline-capable, non-root.
+# Assay Dockerfile — multi-stage, offline-capable, non-root.
 # Build time (docker build) is the ONLY place network is used: wheels are
 # downloaded once and vendor-baked into the final image. The final image
 # needs no network and is tested with `docker run --network none`.
@@ -42,10 +42,15 @@ COPY scripts/ /app/scripts/
 COPY tests/fixtures/ /app/tests/fixtures/
 
 # Non-root user; input mounted read-only at /data, output writable at /out.
+# The container starts as root so the entrypoint can chown the /out volume
+# (docker creates named volumes root-owned; a non-root user cannot chown
+# them), then drops to sheetsol via runuser for the workload.
 RUN useradd --create-home --shell /usr/sbin/nologin sheetsol \
     && mkdir -p /data /out \
-    && chown -R sheetsol:sheetsol /app /out
-USER sheetsol
+    && chown -R sheetsol:sheetsol /app \
+    && chmod 775 /out
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # No shell so no accidental network or path tricks.
-ENTRYPOINT ["python", "-m", "sheet_solution"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

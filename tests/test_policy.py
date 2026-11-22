@@ -102,6 +102,35 @@ def test_yaml_lite_parses_supported_scalars():
         "f": ["x", "y"], "g": {"k": "v"}, "h": "quoted"}
 
 
+def test_yaml_lite_parses_multiline_flow_sequence():
+    data = yaml_lite.loads(
+        "version: 1\nchecks:\n  - id: C1\n    on_fail:\n"
+        "      actions: [tag_row,\n"
+        "                flag_for_human]\n")
+    assert data["checks"][0]["on_fail"]["actions"] == ["tag_row", "flag_for_human"]
+
+
+def test_yaml_lite_parses_multiline_flow_mapping():
+    data = yaml_lite.loads(
+        "version: 1\nparams: {min: 60,\n"
+        "         max: 100}\n")
+    assert data["params"] == {"min": 60, "max": 100}
+
+
+def test_yaml_lite_rejects_truly_unterminated_multiline_flow():
+    with pytest.raises(ConfigError, match="unterminated flow value"):
+        yaml_lite.loads("version: 1\nflow: [a,\n  b\n")
+
+
+def test_compose_file_is_not_a_policy(tmp_path):
+    p = tmp_path / "docker-compose.yml"
+    p.write_text(
+        "services:\n  run:\n    command: [\"run\",\n"
+        "              \"--out\", \"/out\"]\n")
+    with pytest.raises(ConfigError, match="does not look like an Assay policy"):
+        load_policy(p)
+
+
 # --- CLI parse-policy -------------------------------------------------------
 def test_cli_parse_policy_echoes(tmp_path):
     import subprocess

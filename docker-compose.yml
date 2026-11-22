@@ -1,18 +1,25 @@
-# Sheet Solution docker-compose — local, offline use pattern only.
+# Assay docker-compose — local, offline use pattern only.
 # Input is mounted READ-ONLY; output is a writable single directory.
 # No ports are published: there is no server, no API, no network call.
+#
+# The container starts as root so the entrypoint can chown the /out volume
+# (docker creates named volumes root-owned; a non-root user cannot chown
+# them), then drops to sheetsol via runuser for the workload.
+# The workload itself still runs non-root; the root start is only to fix
+# volume ownership.
 services:
   run:
     build: .
-    image: sheet-solution:0.1.0
-    user: sheetsol
+    image: assay:0.4.0
     read_only: true
     network_mode: none
-    entrypoint: ["python", "-m", "sheet_solution"]
     command: ["run",
               "--sheet", "/data/example-sheet.xlsx",
               "--template", "/data/check-template.example.txt",
               "--out", "/out/report"]
     volumes:
       - ./examples:/data:ro
-      - ./out/docker-report:/out
+      - ss-out:/out
+
+volumes:
+  ss-out:

@@ -1,7 +1,21 @@
 # Changelog
 
-All notable changes to Sheet Solution are recorded here.
+All notable changes to Assay (formerly Sheet Solution) are recorded here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [Unreleased]
+
+### Fixed
+- A blank `[CHECK]` placeholder block (for example a trailing skeleton from a
+  spreadsheet export) no longer aborts a template that has real checks. Fully
+  blank blocks are skipped; a template with no filled blocks now says so
+  clearly instead of listing empty required fields. The GUI template builder
+  also skips blank spreadsheet rows.
+- `yaml_lite` now parses flow collections that span multiple lines (e.g.
+  `command: ["run",` continued on the next line). A syntactically valid YAML
+  file that is not a policy — such as `docker-compose.yml` — is rejected with
+  a clear "does not look like an Assay policy" message instead of an
+  "unterminated flow value" parse error.
 
 ## [0.4.0] — 2026-11-20
 

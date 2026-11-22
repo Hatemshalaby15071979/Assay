@@ -1,19 +1,27 @@
-# Sheet Solution — GUI
+# Assay — GUI
 
 A tiny **offline** web UI that wraps the deterministic CLI so non-technical
 users can run a check without touching the terminal.
 
 - Binds `127.0.0.1` only. **No outbound network calls** — the checks run
   through the same code path as `run.sh` / the CLI; the GUI adds no logic.
-- Requires the optional `gui` extra: `pip install "sheet-solution[gui]"`
+- Requires the optional `gui` extra: `pip install "assay[gui]"`
   (installs Flask 3.0.3). Everything else (the audit engine) is stdlib +
   the pinned PDF library.
 
 ## Run it
 
+Easiest from a source checkout:
+
 ```bash
-pip install "sheet-solution[gui]"
-python gui/main.py            # -> http://127.0.0.1:8477
+./gui.sh                      # uses/creates .venv with the GUI extra
+```
+
+Or if the tool is already installed:
+
+```bash
+pip install "assay[gui]"
+python -m sheet_solution.gui.main   # -> http://127.0.0.1:8477
 ```
 
 Then open the URL, paste a sheet path and a filled check-template path, and

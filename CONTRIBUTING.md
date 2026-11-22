@@ -1,6 +1,6 @@
 # Contributing
 
-Sheet Solution is a deterministic, offline tool. Keep it that way.
+Assay is a deterministic, offline tool. Keep it that way.
 
 ## Golden rules
 
@@ -16,6 +16,12 @@ Sheet Solution is a deterministic, offline tool. Keep it that way.
 5. **No silent partial runs.** `run` and `compare` write an intent before
    work and a result after (`sheets/ledger.py`). Do not bypass the ledger or
    make a failure look like a completion.
+
+## Naming
+
+The distribution and console script are `assay`; the import package is
+`sheet_solution`. Keep that split unless you are doing a full migration —
+`python -m sheet_solution` and `assay` must stay the same entry point.
 
 ## Workflow
 

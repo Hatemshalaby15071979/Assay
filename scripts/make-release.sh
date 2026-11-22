@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Sheet Solution — build a standalone, offline release bundle.
+# Assay — build a standalone, offline release bundle.
 #
-# Produces dist/sheet-solution-<version>.bundle.tar.gz containing:
+# Produces dist/assay-<version>.bundle.tar.gz containing:
 #   - the wheel (pip-installable)
 #   - a vendored offline wheel set (so install works with no network)
 #   - run.sh + the GUI launcher
@@ -16,8 +16,8 @@ cd "$(dirname "$0")/.."
 
 VERSION="$(python3 -c 'import tomllib,sys; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
 OUT="dist"
-BUNDLE="$OUT/sheet-solution-${VERSION}.bundle"
-WHEEL="$OUT/sheet_solution-${VERSION}-py3-none-any.whl"
+BUNDLE="$OUT/assay-${VERSION}.bundle"
+WHEEL="$OUT/assay-${VERSION}-py3-none-any.whl"
 
 rm -rf "$OUT" "$BUNDLE"
 mkdir -p "$BUNDLE/vendor/wheels" "$OUT"
@@ -57,7 +57,7 @@ cp examples/check-template.example.txt "$BUNDLE/examples/"
 
 # A one-line release note.
 cat > "$BUNDLE/RELEASE-NOTES.md" <<EOF
-Sheet Solution v${VERSION}
+Assay v${VERSION}
 $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 Deterministic, offline sheet-audit platform. See USER-GUIDE.md (plain
