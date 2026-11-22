@@ -82,6 +82,15 @@
   .wordmark{font:700 1.35rem/1 var(--font-display);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
   .wordmark .slash{color:var(--phos);text-shadow:0 0 12px rgba(124,255,178,.55)}
   .brand .micro{margin-top:.25rem}
+  .helix-logo-frame{
+    display:flex;align-items:center;gap:.4rem;justify-content:center;
+    font-size:10px;letter-spacing:.14em;color:var(--phos);
+    text-transform:uppercase;font:700 var(--font-display)
+  }
+  @media (prefers-reduced-motion:reduce){
+    .helix-logo-frame{opacity:0.7}
+  }
+  .helix-logo-frame svg{width:18px;height:18px}
   .topmeta{display:flex;align-items:stretch;gap:1.1rem;flex-wrap:wrap}
   .meta{display:flex;flex-direction:column;gap:.1rem;min-width:56px}
   .meta-val{font-size:12px;letter-spacing:.06em;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -348,6 +357,23 @@
   @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes helix-pulse-header{
+    0%,100%{transform:scale(1);opacity:1}
+    50%{transform:scale(1.05);opacity:0.9}
+  }
+  @keyframes helix-glow-footer{
+    0%,100%{opacity:0.7}
+    50%{opacity:1}
+  }
+  @keyframes scan{
+    0%{transform:translateY(0)}
+    100%{transform:translateY(4)}
+  }
+  .helix-logo-frame svg{animation:helix-pulse-header 3s ease-in-out infinite}
+  #scanlines-pulse{animation:scan 2s linear infinite}
+  .footer-logo-frame{display:flex;align-items:center;gap:.6rem;justify-content:center}
+  .footer-logo-frame svg{width:22px;height:22px;animation:helix-glow-footer 4s ease-in-out infinite}
+  #scanlines-footer{animation:scan 2s linear infinite}
 
   /* ---------- responsive ---------- */
   @media (max-width:980px){
@@ -403,6 +429,35 @@
         <div class="wordmark">ASSAY</div>
         <div class="micro">Offline audit node</div>
       </div>
+    </div>
+    <div class="helix-logo-frame" aria-label="Helix Solutions logo">
+      <svg class="logo-svg" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+        <defs>
+          <linearGradient id="grad-helix" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#7cffb2;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#5ce1ff;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ffb347;stop-opacity:1" />
+          </linearGradient>
+          <filter id="glow-helix">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+            <path d="M0 0L4 0M0 4L4 4M0 8L4 8M4 0L4 12M0 12L4 12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <g filter="url(#glow-helix)">
+          <path d="M32 48h48l-16 160h16l16-48h32l16 48h16l-16-64h16l16 48h16l-32-96h32l16 48h16l-16-64h64l32 160h-16l-32-96h-32l-16 48h-16l32-96 16 48h48l16-64 16 48h16l-32-96h48l32 160h-16v-16h16l16-48h16l-32 96 16 64h-16l-32-96h-64l-16 48h-16l32-96-16 48h-48v-48h16l16-48h16l-32 96 16 48h-16l-32-96-16 48h48v-48z"
+                fill="url(#grad-helix)" class="logo-path"/>
+        </g>
+        <g opacity="0.15">
+          <rect x="0" y="0" width="256" height="256" fill="url(#scanlines)"/>
+        </g>
+      </svg>
+      <span>Helix Solutions</span>
     </div>
     <div class="topmeta" aria-label="Node status">
       <div class="meta optional"><span class="micro">Bind</span><span class="meta-val">127.0.0.1</span></div>
@@ -797,7 +852,35 @@
     <span class="micro">PII local</span><span class="dot" aria-hidden="true"></span>
     <span class="micro">Deterministic</span>
     <span class="foot-spacer"></span>
-    <span class="micro">Sheet//Solution · local node</span>
+    <div class="footer-logo-frame">
+      <svg class="logo-svg" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+        <defs>
+          <linearGradient id="grad-helix-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#7cffb2;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#5ce1ff;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ffb347;stop-opacity:1" />
+          </linearGradient>
+          <filter id="glow-helix-footer">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <pattern id="scanlines-footer" width="4" height="4" patternUnits="userSpaceOnUse">
+            <path d="M0 0L4 0M0 4L4 4M0 8L4 8M4 0L4 12M0 12L4 12" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <g filter="url(#glow-helix-footer)">
+          <path d="M32 48h48l-16 160h16l16-48h32l16 48h16l-16-64h16l16 48h16l-32-96h32l16 48h16l-16-64h64l32 160h-16l-32-96h-32l-16 48h-16l32-96 16 48h48l16-64 16 48h16l-32-96h48l32 160h-16v-16h16l16-48h16l-32 96 16 64h-16l-32-96h-64l-16 48h-16l32-96-16 48h-48v-48h16l16-48h16l-32 96 16 48h-16l-32-96-16 48h48v-48z"
+                fill="url(#grad-helix-footer)" class="logo-path"/>
+        </g>
+        <g id="scanlines-footer" opacity="0.15">
+          <rect x="0" y="0" width="256" height="256" fill="url(#scanlines-footer)"/>
+        </g>
+      </svg>
+      <span class="micro">Helix Solutions</span>
+    </div>
   </footer>
 </div>
 

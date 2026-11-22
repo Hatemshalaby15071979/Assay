@@ -1,6 +1,8 @@
 # Assay — release readiness
 
 **Status date:** 2026-11-22
+**Product:** Assay (distributed as `assay`, import package `sheet_solution`)
+**Owner:** Helix Solutions
 **Scope:** local, offline, single-user sheet-ops — audit, two-sheet compare,
 profile (analyze), compatibility, and a policy-driven, fail-closed decision loop
 **Decision:** staged preview candidate, CI-verifiable; mitigations applied.
@@ -99,6 +101,14 @@ These do not change the release decision: 0.4.0 remains a staged preview candida
   decision state machine invariants, deterministic planning, ledger integrity.
 - **Security reporting**: added email contact guidance to `SECURITY.md`.
 - **DOCX/XLSX corpus**: seeded with samples from `examples/` directory.
+
+### Brand alignment
+- **Helix Solutions logo**: Animated Helix Solutions logo (gradient green→cyan→amber with scanline effects) added to all GUI pages:
+  - Header: Animated logo with "Helix Solutions" text and pulse animation
+  - Footer: Smaller animated logo with glow-pulse animation
+  - Source template `src/sheet_solution/gui/index.html` updated to match `gui/index.html`
+  - CSS animations: `helix-pulse-header`, `helix-glow-footer`, `scan` keyframes
+  - Reduced-motion media query support for accessibility
 
 ## Staged preview rollout
 
