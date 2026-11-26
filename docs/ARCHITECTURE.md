@@ -178,4 +178,4 @@ policy" message rather than a low-level parse error.
   and CLI/GUI parity test.
 - 0.1.0 — initial released version. Spine from Signoff 0.1.0 (MIT).
 
-See [`PROVENANCE.md`](../PROVENANCE.md) for the exact reuse lineage.
+See [`PROVENANCE.md`](archive/PROVENANCE.md) for the exact reuse lineage.

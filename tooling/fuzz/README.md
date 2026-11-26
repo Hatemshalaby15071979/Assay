@@ -38,4 +38,4 @@ tooling/fuzz/
 - `src/sheet_solution/core/questionnaire_parsers.py` - DOCX parsing
 - `src/sheet_solution/core/policy/yaml_lite.py` - Policy YAML parsing
 
-See [RELEASE_READINESS.md](../RELEASE_READINESS.md#closure-of-open-findings) for status.
+See [RELEASE_READINESS.md](../../docs/archive/RELEASE_READINESS.md#closure-of-open-findings) for status.

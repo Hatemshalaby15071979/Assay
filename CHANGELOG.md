@@ -22,7 +22,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 The sheet-ops release: policies, a named rules registry, analyze and
 compatibility tasks, a fail-closed decision loop in CLI and GUI, plus ops
 metrics and a bounded-memory sheet loader. Staged preview; see
-`RELEASE_READINESS.md`.
+`docs/archive/RELEASE_READINESS.md`.
 
 ### Added
 - **Versioned policy, one schema, three inputs** (`core/policy/`): a plain
@@ -92,7 +92,7 @@ metrics and a bounded-memory sheet loader. Staged preview; see
   recoverable pending intent; the ledger is hash-chained and locally
   anchorable. New `ledger` CLI command (`verify`, `pending`, `tail`,
   `anchor`, `check-anchor`).
-- **Release readiness record** (`RELEASE_READINESS.md`) separating the CI
+- **Release readiness record** (`docs/archive/RELEASE_READINESS.md`) separating the CI
   verification gate from the release decision.
 - **Scale smoke** (`scripts/scale-stress.py`) and **CLI/GUI parity test**
   (`tests/test_parity.py`).
@@ -162,7 +162,7 @@ metrics and a bounded-memory sheet loader. Staged preview; see
   (CSV + audit log + extracted images) with a hash chain you can re-verify.
 - Reused spine from Signoff 0.1.0 (model / util / engine / render / verify /
   ingest / mapping) under `src/sheet_solution/core/` — the inherited tests
-  pass unchanged against the copied engine (see `PROVENANCE.md`).
+  pass unchanged against the copied engine (see `docs/archive/PROVENANCE.md`).
 - New sheet layer (`src/sheet_solution/sheets/`): template parser,
   deterministic check runner, report renderer, embedded-image extraction.
 - Two personas: **auditor** (pass/fail against a standard) and **verifier**
