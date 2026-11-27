@@ -110,3 +110,20 @@ Verification: Locally — `check-scaffold: OK — 83 required files present`, `c
 Left undone: Nothing failing. Two things worth the owner's eye: (1) `docs/archive/` is scanned as live docs by `check-doc-consistency.py` — a deliberate choice, because the README still presents the release record and provenance as current claims, and all three are clean today; (2) the scaffold check asserts the root files but does not yet assert GOVERNANCE.md's "no stray .md/.txt at root" rule, which is the rule this whole breakage came from — left for the owner to call.
 
 Sensitive: git push to master (two commits: 12c5d54 sign-in, aa43016 repair), authorised by the owner's instruction in chat on 2026-11-27.
+
+## [2026-11-27 04:00 EET] — sami (OpenMausBot), owner-authorised root-hygiene assertion
+
+STATUS: SIGN-IN (work in progress)
+
+Task: Close the open item from the 02:57 sign-out. The owner answered "yes" in chat on 2026-11-27: make `scripts/check-scaffold.py` assert GOVERNANCE.md's root rule — "No stray `.md`/`.txt` at the root" — so the exact rule the 2026-11-26 breakage came from can no longer be violated silently.
+
+Touched: Will touch `scripts/check-scaffold.py` (new root-hygiene assertion, driven by the GOVERNANCE.md section 2 document table), `tests/test_scaffold.py` (a test proving the assertion fails on a planted stray root doc), and this ledger. No file moved, renamed or deleted.
+
+Why: The scaffold check asserts that required root files exist, but nothing asserted that *unlisted* root docs do not. That asymmetry is what let the governance pass archive three reports while the root set looked satisfied; a one-way check cannot protect a "nothing else at root" rule.
+
+Verification: Planned — `python scripts/check-scaffold.py`, `python scripts/check-offline.py`, `python scripts/check-doc-consistency.py`, then `PYTHONPATH=src python -m pytest -q`; then a planted-stray negative run to prove the new assertion actually fails; then the GitHub Actions run on the new commit.
+
+Left undone: Nothing at sign-in.
+
+Sensitive: git push to master, authorised by the owner's instruction in chat on 2026-11-27.
+
