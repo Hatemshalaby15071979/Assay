@@ -142,3 +142,22 @@ Verification: Locally — `check-scaffold: OK — 83 required files present; roo
 Left undone: Nothing failing. One environment note for the next agent, not a repo defect: this workspace's `python3` resolves a stale copy of `sheet_solution` from `~/.local/lib/python3.13/site-packages`, so `scripts/run-all-checks.sh` (which invokes bare `python3`) reports the demo fixtures missing; run the checks as CI does — `PYTHONPATH=src python3 scripts/check-determinism.py` — or the Docker image, and they pass. Consider having the next agent uninstall the stray site-packages copy or run everything under `PYTHONPATH=src`.
 
 Sensitive: git push to master (two commits: bc5ea3f sign-in, ebaf04c the assertion), authorised by the owner's instruction in chat on 2026-11-27.
+
+## [2026-11-27 05:34 EET] — sami (Claude), portfolio governance subagent
+STATUS: SIGN-IN
+
+Task: Land the portfolio-wide root-document gate here as `scripts/check_root_docs.py` and
+wire it into CI. The owner's 2026-11-27 "mirror the assertion across the portfolio"
+instruction has now landed the same file in createlee, Helix-Solutions, Helix-Matrix and
+Helix-Codex; those ledgers record it as byte-identical to the Assay copy, so the Assay copy
+must actually exist.
+
+Touched (planned): `scripts/check_root_docs.py` (new); `.github/workflows/ci.yml` (new
+step); `AGENTS.md` (this entry, the sign-out, and the status block's CI commit reference).
+
+Why: Assay's assertion landed inline inside `scripts/check-scaffold.py` earlier today. It is
+the same rule, but a per-repository implementation cannot be the "one file, one hash" the
+rest of the portfolio now points at, and this repository owns the reference.
+
+Sensitive: `git push origin master` (owner's instruction in chat, 2026-11-27). No force
+push, no history rewrite, no PR or issue writes, no secrets.
