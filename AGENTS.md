@@ -77,3 +77,19 @@ Why: Owner's 2026-11-26 instruction to bring every public repo to one governance
 Verification: CONSTITUTION.md md5sum equal to the canonical file; `git ls-files` confirms the five reports now live under docs/archive/; all root cross-references updated to the new paths.
 Left undone: None for this pass.
 Sensitive: git push of governance docs to master, authorised by owner 2026-11-26.
+
+## [2026-11-27 02:49 EET] — sami (OpenMausBot), owner-authorised CI repair
+
+STATUS: SIGN-IN (work in progress)
+
+Task: Repair the red CI on master — run 45877938218 at commit 4636225. `scripts/check-scaffold.py` reports 3 missing required root files; `scripts/check-doc-consistency.py` reports the README no longer declares itself the status source. All three Tests jobs fail at step "Scaffold + offline + doc-consistency" and the "Version and status consistency" job fails at step 4, which skips Docker, Package, Release gate and Prerelease image.
+
+Touched: Will touch `scripts/check-scaffold.py`, `scripts/check-doc-consistency.py`, `README.md`, and this ledger. No file moved, renamed or deleted.
+
+Why: The 2026-11-26 governance pass moved CONTRIBUTING.md, PROVENANCE.md and RELEASE_READINESS.md into `docs/archive/` and rewrote the README to the house style, but neither evidence script was updated with it. Both now assert paths and a phrase that the governance pass deliberately removed, so the root cause is stale checks, not a broken product.
+
+Verification: Planned — run `python scripts/check-scaffold.py`, `python scripts/check-offline.py` and `python scripts/check-doc-consistency.py` locally, then `PYTHONPATH=src python -m pytest -q`; then confirm the GitHub Actions run on the repair commit is green on every job, including the previously skipped Docker, Package, Release gate and Prerelease image jobs.
+
+Left undone: Nothing at sign-in.
+
+Sensitive: git push to master, authorised by the owner's instruction in chat on 2026-11-27.
