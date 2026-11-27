@@ -42,7 +42,7 @@ Sensitive: <any remote writes, secrets, or destructive actions, or "none">
 
 ```
 STATUS WHEN LAST LEFT: Working — Assay 0.4.0, a staged preview candidate (release
-record 2026-11-22): offline by construction, CI green on aa43016 (2026-11-27),
+record 2026-11-22): offline by construction, CI green on ebaf04c (2026-11-27),
 deterministic core
 reused from Signoff 0.1.0. Not independently audited for stable release use.
 Docs restructured to the 2026-11-26 governance pass (AGENTS/CONSTITUTION/GOVERNANCE
@@ -127,3 +127,18 @@ Left undone: Nothing at sign-in.
 
 Sensitive: git push to master, authorised by the owner's instruction in chat on 2026-11-27.
 
+## [2026-11-27 04:06 EET] — sami (OpenMausBot), owner-authorised root-hygiene assertion
+
+STATUS: SIGN-OUT (landing complete)
+
+Task: Extend `scripts/check-scaffold.py` so it asserts GOVERNANCE.md section 2's "No stray `.md`/`.txt` at the root" — the open item the owner closed with "yes" in chat on 2026-11-27. Done.
+
+Touched: `scripts/check-scaffold.py` (new `ROOT_ALLOWED_DOCS` derived from the section 2 document table, new `check_root_hygiene()`, wired into `main()` and the module docstring; the success line now reports the hygiene result); `tests/test_scaffold.py` (two tests: one drives the check against a temp tree and proves it flags an unlisted `.md` and `.txt` while passing the allowed ones, one asserts the real root is clean); this ledger (new sign-in entry, this sign-out entry, and the status block's CI commit reference). No file moved, renamed or deleted.
+
+Why: `REQUIRED` proved the documented root documents are present but nothing proved that *unlisted* ones are absent, so the root rule was unenforced in exactly the direction the 2026-11-26 pass was broken against. The new check tests both directions. It understands `LICENSE` may also appear as `LICENSE.md`, compares case-insensitively, ignores non-document files (`.toml`, `.pdf`, etc.) and ignores anything in a subdirectory, so `docs/` and `docs/archive/` stay free.
+
+Verification: Locally — `check-scaffold: OK — 83 required files present; root hygiene clean (7 allowed root documents)`, `check-offline: OK` (66 files, zero network imports/SDKs/outbound calls/env reads), `Documentation consistency checks passed`, `328 passed` (was 326; +2 new tests) at 85% coverage over 3609 statements, determinism byte-identical across runs (7 artifacts, run1 == run2), scale smoke `rows=2000 matched=1999 changed=1`. Negative tests, each on the real tree and then restored: a planted `STRAY-NOTE.md` and a planted `NOTES.txt` both produced exit 1 with `stray root document: … -- move it to docs/ or docs/archive/`; a planted `docs/scratch/note.md` correctly left the check green, confirming subdirectories are not root. On GitHub — run 45926151986 on `ebaf04c`: all 11 jobs success; the Tests (Python 3.13) job log shows `check-scaffold: OK — 83 required files present; root hygiene clean (7 allowed root documents)`, so the new assertion demonstrably ran in CI. Prerelease image skipped by design (tag/dispatch only).
+
+Left undone: Nothing failing. One environment note for the next agent, not a repo defect: this workspace's `python3` resolves a stale copy of `sheet_solution` from `~/.local/lib/python3.13/site-packages`, so `scripts/run-all-checks.sh` (which invokes bare `python3`) reports the demo fixtures missing; run the checks as CI does — `PYTHONPATH=src python3 scripts/check-determinism.py` — or the Docker image, and they pass. Consider having the next agent uninstall the stray site-packages copy or run everything under `PYTHONPATH=src`.
+
+Sensitive: git push to master (two commits: bc5ea3f sign-in, ebaf04c the assertion), authorised by the owner's instruction in chat on 2026-11-27.
