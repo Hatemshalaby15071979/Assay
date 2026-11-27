@@ -6,7 +6,8 @@ sheet-audit tool. Unlike the Signoff reference (which carried owner
 decision-making files for a portfolio-evidence project), this repository is
 shipped to end users, so the scaffold checks the *tool's* invariants:
 
-1. Every required path exists and is non-empty.
+1. Every required path exists and is non-empty (root set per GOVERNANCE.md
+   section 2; the report trio lives under docs/archive/ since 2026-11-26).
 2. No forbidden placeholder tokens in src/ or scripts/ (TODO, FIXME, XXX,
    HACK, NotImplementedError, bare stub bodies).
 3. The offline guarantee: the check-offline scan passes.
@@ -28,11 +29,14 @@ FORBIDDEN_TOKENS = [
 ]
 
 REQUIRED = [
-    # root
-    "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md",
+    # root -- the requested set from GOVERNANCE.md section 2 (nothing else at root)
+    "README.md", "AGENTS.md", "CONSTITUTION.md", "GOVERNANCE.md",
+    "LICENSE", "CHANGELOG.md", "SECURITY.md",
     "pyproject.toml", "Makefile", ".gitignore", ".editorconfig",
-    ".dockerignore", "Dockerfile", "docker-compose.yml",
-    "PROVENANCE.md", "SECURITY.md", "RELEASE_READINESS.md", ".gitleaks.toml",
+    ".dockerignore", "Dockerfile", "docker-compose.yml", ".gitleaks.toml",
+    # one-off / historical reports, archived by the 2026-11-26 governance pass
+    "docs/archive/CONTRIBUTING.md", "docs/archive/PROVENANCE.md",
+    "docs/archive/RELEASE_READINESS.md",
     # packaging
     "requirements.lock",
     # tool entry points

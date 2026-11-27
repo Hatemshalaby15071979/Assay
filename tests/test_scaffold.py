@@ -70,6 +70,6 @@ def test_readme_states_offline_guarantee_up_front():
 
 
 def test_provenance_records_reuse():
-    provenance = (REPO / "PROVENANCE.md").read_text(encoding="utf-8")
+    provenance = (REPO / "docs" / "archive" / "PROVENANCE.md").read_text(encoding="utf-8")
     assert "signoff" in provenance.lower()
     assert "0.1.0" in provenance

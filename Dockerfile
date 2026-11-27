@@ -3,7 +3,7 @@
 # downloaded once and vendor-baked into the final image. The final image
 # needs no network and is tested with `docker run --network none`.
 #
-# Reused spine + packaging from Signoff 0.1.0 (see PROVENANCE.md).
+# Reused spine + packaging from Signoff 0.1.0 (see docs/archive/PROVENANCE.md).
 
 # ---- Stage 1: builder — download pinned, hash-verified wheels --------------
 FROM python:3.11-slim@sha256:07d4824036af339fa1b6ef769cc99d9c10a141769538b52b3b597c84f7a7b535 AS builder

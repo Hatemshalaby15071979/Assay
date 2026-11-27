@@ -7,7 +7,8 @@
 
 Assay checks a spreadsheet (Excel or CSV) against checks you write in plain English,
 and hands back a report you can stand behind — what passed, what failed, and exactly
-which rows are the proof. Built for auditors and verifiers on operational floors.
+which rows are the proof. It runs entirely offline, on your own machine. Built for
+auditors and verifiers on operational floors.
 
 *by Helix Solutions*
 
@@ -93,6 +94,9 @@ reproducible from this repo), **local-first** (no network in the check path, eve
 **a human is always in charge** (nothing is applied without a named person's approval).
 
 ## Current status
+
+This section is the **single source of truth for project status**; every landing
+page, dashboard or report mirrors it and none of them overrides it.
 
 **As of 2026-11-22:** Assay 0.4.0 is a *staged preview candidate* — CI-verified on
 Python 3.11–3.13 and offline by construction — **not** an independently audited stable

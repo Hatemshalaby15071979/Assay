@@ -1,6 +1,6 @@
 # Assay — pyproject.toml
 # Offline, deterministic sheet-audit platform. Reused spine from Signoff 0.1.0
-# (see PROVENANCE.md); new sheet-comparison layer is `sheet_solution.sheets`.
+# (see docs/archive/PROVENANCE.md); new sheet-comparison layer is `sheet_solution.sheets`.
 # Runtime: Python 3.11+ standard library + one pinned pure-Python PDF lib
 # (fpdf2, inherited for the signable dossier). No network at runtime.
 #

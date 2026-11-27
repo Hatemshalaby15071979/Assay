@@ -1,7 +1,7 @@
 name: CI
 
 # Verification gate only — a green run is not a release decision. The dated
-# release record and finding register live in RELEASE_READINESS.md.
+# release record and finding register live in docs/archive/RELEASE_READINESS.md.
 #
 # Assay is offline-by-construction; this also builds the Docker
 # image and runs it under `--network none` to prove the guarantee.

@@ -29,9 +29,9 @@ LIVE_DOCS = (
     "ARCHITECTURE.md",
     "docs/ARCHITECTURE.md",
     "docs/USER-GUIDE.md",
-    "PROVENANCE.md",
-    "CONTRIBUTING.md",
-    "RELEASE_READINESS.md",
+    "docs/archive/PROVENANCE.md",
+    "docs/archive/CONTRIBUTING.md",
+    "docs/archive/RELEASE_READINESS.md",
 )
 
 FORBIDDEN_SIGNATURE_CLAIMS = re.compile(
