@@ -42,7 +42,7 @@ Sensitive: <any remote writes, secrets, or destructive actions, or "none">
 
 ```
 STATUS WHEN LAST LEFT: Working — Assay 0.4.0, a staged preview candidate (release
-record 2026-11-22): offline by construction, CI green on ebaf04c (2026-11-27),
+record 2026-11-22): offline by construction, CI green on 1d58d96 (2026-11-27),
 deterministic core
 reused from Signoff 0.1.0. Not independently audited for stable release use.
 Docs restructured to the 2026-11-26 governance pass (AGENTS/CONSTITUTION/GOVERNANCE
@@ -161,3 +161,51 @@ rest of the portfolio now points at, and this repository owns the reference.
 
 Sensitive: `git push origin master` (owner's instruction in chat, 2026-11-27). No force
 push, no history rewrite, no PR or issue writes, no secrets.
+
+## [2026-11-27 05:44 EET] — sami (Claude), portfolio governance subagent
+STATUS: SIGN-OUT (landing complete)
+
+Task: Land the portfolio-wide root-document gate here as `scripts/check_root_docs.py` and
+wire it into CI, so the claim the other repositories' ledgers now make — that their copy is
+byte-identical to Assay's — is true. Done.
+
+Touched: `scripts/check_root_docs.py` (new; md5 `35fc37ab16ff4461a33d4e2dcaedb7bf`, the
+same bytes as the copy in createlee, Helix-Solutions, Helix-Matrix and Helix-Codex);
+`.github/workflows/ci.yml` (new "Root-document hygiene (GOVERNANCE.md section 2)" step in the
+Tests job); `AGENTS.md` (the sign-in, this entry, and the status block above, which now names
+commit `1d58d96`). No file moved, renamed or deleted.
+
+Why: earlier today the same rule was added inline to `scripts/check-scaffold.py` with a
+hard-coded `ROOT_ALLOWED_DOCS` set. That was the right fix for the direction that was
+missing, but a per-repository implementation cannot be the single file the rest of the
+portfolio points at, and this repository owns the reference. The new script parses the
+allowed set out of GOVERNANCE.md section 2 instead of repeating it, so the policy document
+stays the single source of truth; `requirements*.txt`/`constraints*.txt` are treated as
+package manifests rather than documents.
+
+Deliberate overlap, stated rather than hidden: `check-scaffold.py` still asserts the same
+rule inline as part of the scaffold contract, and now so does `check_root_docs.py`. For
+Assay's own GOVERNANCE.md table both derive the identical seven documents, so they agree
+today. They are two implementations of one rule, which is one more than ideal — retiring
+the inline copy needs `tests/test_scaffold.py::test_root_hygiene_flags_unlisted_root_documents`
+rewritten, because that test drives the rule against a synthetic root that has no
+GOVERNANCE.md for a parser to read. That rewrite is the named next step, not something
+done here, and the portfolio gate is authoritative if the two ever disagree.
+
+Verification: `python scripts/check_root_docs.py` → "check_root_docs: OK — Assay/ holds only
+the GOVERNANCE.md section 2 set" (7 table rows, 7 allowed root documents);
+`--self-test` → "7/7 cases behaved" (a planted `STRAY-NOTE.md` and a planted `NOTES.txt` each
+stop the gate, a missing required document stops it, `requirements.txt` at the root is
+acknowledged as a non-document, a stray under `docs/` is ignored, and an unparsable section 2
+fails closed). The existing gates were re-run and stayed green: `check-scaffold: OK — 83
+required files present; root hygiene clean (7 allowed root documents)`, `check-offline: OK`
+(66 files, zero network imports/SDKs/outbound calls/env reads), `Documentation consistency
+checks passed`, the suite's 328 tests pass (exit 0) at 85% coverage over 3609 statements,
+determinism `OK — outputs are byte-identical across runs`, scale smoke
+`rows=2000 matched=1999 changed=1`. CI on the pushed commits is the record of the same steps
+on a clean runner.
+
+Left undone: unify the two root-hygiene implementations as described above. Nothing failing.
+
+Sensitive: `git push origin master` (owner's instruction in chat, 2026-11-27). No force push,
+no history rewrite, no PR or issue writes, no secrets.
