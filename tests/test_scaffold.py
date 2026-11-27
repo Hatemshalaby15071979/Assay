@@ -7,6 +7,7 @@ contract), not the owner-decision scaffolding the Signoff reference carried.
 """
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -73,3 +74,44 @@ def test_provenance_records_reuse():
     provenance = (REPO / "docs" / "archive" / "PROVENANCE.md").read_text(encoding="utf-8")
     assert "signoff" in provenance.lower()
     assert "0.1.0" in provenance
+
+
+def _load_check_scaffold():
+    spec = importlib.util.spec_from_file_location(
+        "check_scaffold_under_test", REPO / "scripts" / "check-scaffold.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_root_hygiene_flags_unlisted_root_documents(tmp_path):
+    """GOVERNANCE.md section 2: only its table's documents may sit at the root.
+
+    Drives the check against a temporary tree so the assertion is proven to
+    fail closed, without writing into the real repository root.
+    """
+    module = _load_check_scaffold()
+    (tmp_path / "README.md").write_text("# allowed\n", encoding="utf-8")
+    (tmp_path / "STRAY-NOTE.md").write_text("# stray\n", encoding="utf-8")
+    (tmp_path / "NOTES.txt").write_text("stray\n", encoding="utf-8")
+    (tmp_path / "unrelated.toml").write_text("x = 1\n", encoding="utf-8")
+
+    problems: list[str] = []
+    real_repo = module.REPO
+    module.REPO = tmp_path
+    try:
+        module.check_root_hygiene(problems)
+    finally:
+        module.REPO = real_repo
+
+    flagged = " ".join(problems)
+    assert "STRAY-NOTE.md" in flagged, problems
+    assert "NOTES.txt" in flagged, problems
+    assert "README.md" not in flagged, problems
+    assert "unrelated.toml" not in flagged, problems
+
+
+def test_root_hygiene_accepts_the_real_root():
+    problems: list[str] = []
+    _load_check_scaffold().check_root_hygiene(problems)
+    assert problems == [], problems

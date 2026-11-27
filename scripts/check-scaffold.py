@@ -12,6 +12,8 @@ shipped to end users, so the scaffold checks the *tool's* invariants:
    HACK, NotImplementedError, bare stub bodies).
 3. The offline guarantee: the check-offline scan passes.
 4. The output-files contract is stable (determinism of the report pack).
+5. Root hygiene: no stray .md/.txt at the root, and no unlisted root document
+   (GOVERNANCE.md section 2 documents the allowed set).
 
 Run: python scripts/check-scaffold.py
 Exit 0 = ok, exit 1 = problem (with a printed list).
@@ -94,6 +96,15 @@ REQUIRED = [
 
 ALLOW_EMPTY: set[str] = set()
 
+# GOVERNANCE.md section 2, "root documents" table: these are the only .md/.txt
+# documents permitted at the root. Everything else belongs in docs/ or
+# docs/archive/. Comparisons are case-insensitive; LICENSE may also appear as
+# LICENSE.md. Note there is no .txt allowance at all.
+ROOT_ALLOWED_DOCS = {
+    "readme.md", "agents.md", "constitution.md", "governance.md",
+    "changelog.md", "license.md", "security.md",
+}
+
 
 def check_forbidden_tokens(problems: list[str]) -> None:
     targets = list((REPO / "src").rglob("*.py")) + list((REPO / "scripts").rglob("*.py"))
@@ -128,6 +139,26 @@ def check_pyproject_pins(problems: list[str]) -> None:
         problems.append("pyproject.toml requires-python must be >=3.11")
 
 
+def check_root_hygiene(problems: list[str]) -> None:
+    """GOVERNANCE.md section 2: "No stray `.md`/`.txt` at the root".
+
+    Checked in both directions: REQUIRED proves the documented root documents
+    are present, and this proves nothing *unlisted* sits beside them. Only the
+    first direction existed, which is how the 2026-11-26 governance pass could
+    archive three reports while the root set still looked satisfied -- a
+    one-way check cannot enforce a "nothing else at root" rule.
+    """
+    for path in sorted(REPO.iterdir()):
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
+            continue
+        if path.name.lower() in ROOT_ALLOWED_DOCS:
+            continue
+        problems.append(
+            f"stray root document: {path.name} -- move it to docs/ or "
+            f"docs/archive/ (GOVERNANCE.md section 2)"
+        )
+
+
 def main() -> int:
     problems: list[str] = []
     for rel in REQUIRED:
@@ -142,13 +173,15 @@ def main() -> int:
 
     check_forbidden_tokens(problems)
     check_pyproject_pins(problems)
+    check_root_hygiene(problems)
 
     if problems:
         print(f"check-scaffold: {len(problems)} problem(s):")
         for p in problems:
             print(f"  - {p}")
         return 1
-    print(f"check-scaffold: OK — {len(REQUIRED)} required files present")
+    print(f"check-scaffold: OK — {len(REQUIRED)} required files present; "
+          f"root hygiene clean ({len(ROOT_ALLOWED_DOCS)} allowed root documents)")
     return 0
 
 
