@@ -42,7 +42,8 @@ Sensitive: <any remote writes, secrets, or destructive actions, or "none">
 
 ```
 STATUS WHEN LAST LEFT: Working — Assay 0.4.0, a staged preview candidate (release
-record 2026-11-22): offline by construction, CI-verifiable, deterministic core
+record 2026-11-22): offline by construction, CI green on aa43016 (2026-11-27),
+deterministic core
 reused from Signoff 0.1.0. Not independently audited for stable release use.
 Docs restructured to the 2026-11-26 governance pass (AGENTS/CONSTITUTION/GOVERNANCE
 at root, one-off reports in docs/archive/). Open items: none release-blocking in the
@@ -93,3 +94,19 @@ Verification: Planned — run `python scripts/check-scaffold.py`, `python script
 Left undone: Nothing at sign-in.
 
 Sensitive: git push to master, authorised by the owner's instruction in chat on 2026-11-27.
+
+## [2026-11-27 02:57 EET] — sami (OpenMausBot), owner-authorised CI repair
+
+STATUS: SIGN-OUT (landing complete)
+
+Task: Repair the red CI on master (run 45877938218 at 4636225). Done.
+
+Touched: `scripts/check-scaffold.py` (required-path set now follows GOVERNANCE.md section 2: root is README/AGENTS/CONSTITUTION/GOVERNANCE/LICENSE/CHANGELOG/SECURITY, and the three reports are checked at `docs/archive/`); `scripts/check-doc-consistency.py` (live-doc scan pointed at the archived paths instead of the dead root paths, which it had been silently skipping); `tests/test_scaffold.py` (reads `docs/archive/PROVENANCE.md`); `README.md` (the "Current status" section now declares itself the single source of truth for project status, per AGENTS.md section 4, and the opening line states the offline guarantee up front as the scaffold test requires); `scripts/make-release.sh` (copied `PROVENANCE.md` from root — would have aborted the bundle); pointer comments in `.github/workflows/ci.yml`, `Dockerfile`, `pyproject.toml`, `src/sheet_solution/__init__.py`. No file moved or deleted.
+
+Why: The 2026-11-26 governance pass was correct and deliberate; the checks that assert it were not updated with it. `check-scaffold.py` demanded three files at root that had just been archived and did not assert the new root set at all, and `check-doc-consistency.py` required a README phrase the house-style rewrite dropped. Because the scaffold step runs first, CI never reached the test suite — which was also stale, so two further failures in `tests/test_scaffold.py` had been invisible. Root cause was stale assertions, not a broken product.
+
+Verification: Locally — `check-scaffold: OK — 83 required files present`, `check-offline: OK` (66 files, zero network imports/SDKs/outbound calls/env reads), `Documentation consistency checks passed`, GUI import OK, GUI smoke PASS, `326 passed`, determinism byte-identical across runs, 2000-row scale smoke ok. Each check was then re-run against a deliberately broken copy (removed `docs/archive/PROVENANCE.md`; removed the status declaration; removed `AGENTS.md`) and each failed as it should — the new root assertions catch a missing `AGENTS.md`, which the old check could not. On GitHub — run 45919490534 on `aa43016`: all 11 jobs success, including Docker (offline proof) and Package, which had been skipped; Prerelease image skipped by design (tag/dispatch only). Docker log shows `LEDGER-VERIFIED: 2 event(s)` and the example audit's 4 checks; Package built `assay-0.4.0`; Tests jobs show 85% coverage over 3609 statements.
+
+Left undone: Nothing failing. Two things worth the owner's eye: (1) `docs/archive/` is scanned as live docs by `check-doc-consistency.py` — a deliberate choice, because the README still presents the release record and provenance as current claims, and all three are clean today; (2) the scaffold check asserts the root files but does not yet assert GOVERNANCE.md's "no stray .md/.txt at root" rule, which is the rule this whole breakage came from — left for the owner to call.
+
+Sensitive: git push to master (two commits: 12c5d54 sign-in, aa43016 repair), authorised by the owner's instruction in chat on 2026-11-27.
