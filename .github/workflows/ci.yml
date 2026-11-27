@@ -53,6 +53,16 @@ jobs:
           python scripts/check-offline.py
           python scripts/check-doc-consistency.py
 
+      # GOVERNANCE.md section 2, asserted in both directions by the portfolio-wide
+      # gate: every root document the table names is present, and no unlisted
+      # .md/.txt sits at the root. check-scaffold.py asserts the same rule inline as
+      # part of the scaffold contract; this copy is the one the other governance
+      # repositories carry byte-identically. The self-test proves it fails closed.
+      - name: Root-document hygiene (GOVERNANCE.md section 2)
+        run: |
+          python scripts/check_root_docs.py
+          python scripts/check_root_docs.py --self-test
+
       - name: GUI import lint (installable via the [gui] extra)
         run: |
           python -m pip install -e ".[gui]"
